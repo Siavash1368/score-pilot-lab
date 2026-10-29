@@ -60,9 +60,36 @@ OOT_VINTAGE = 2016
 MONITOR_VINTAGES = ("2017Q1", "2018Q4")
 
 # --- Target ------------------------------------------------------------------
+# Performance is observed at the data snapshot, not at the last issue month: the newest
+# last_pymnt_d in the accepted file is 2019-03-01. A vintage is observable at horizon h months
+# when issue_d + h months <= PERFORMANCE_SNAPSHOT.
+PERFORMANCE_SNAPSHOT = "2019-03-01"
 PERFORMANCE_WINDOW_MONTHS = 24
-BAD_STATUSES = ("Charged Off", "Default", "Late (31-120 days)")
+# Terminal statuses that mean the loan reached serious delinquency.
+BAD_STATUSES = ("Charged Off", "Default")
+# Open delinquency at the snapshot: not (yet) 90+ DPD, treated by the same timing arithmetic.
+DELINQUENT_STATUSES = ("Late (31-120 days)", "Late (16-30 days)", "In Grace Period")
+# Lending Club publishes no monthly payment history, so the month a loan reached 90+ DPD is
+# approximated from last_pymnt_d: the first missed due date is one month after the last payment,
+# 60 DPD two months after that, 90 DPD three months after that. A loan that never paid has its
+# first miss in month 1.
+MONTHS_LAST_PAYMENT_TO_FIRST_MISS = 1
+MONTHS_FIRST_MISS_TO_60DPD = 2
+MONTHS_FIRST_MISS_TO_90DPD = 3
+# Label rule (decided 2026-10-27, see docs/decisions.md):
+#   bad           = delinquent status and 90+ DPD reached within the window
+#   indeterminate = delinquent status, first miss inside the window, 90+ DPD after it
+#   good          = everything else that is observable (Fully Paid, Current, or delinquent only
+#                   after the window closed)
+# Early-performance indicator for the censored monitor vintages (NB09): 60+ DPD within 12 months.
+EARLY_WINDOW_MONTHS = 12
 CREDIT_POLICY_PREFIX = "Does not meet the credit policy. Status:"
+
+# --- Incumbent score -----------------------------------------------------------
+# The pilot benchmarks the scorecard against the lender's current score: the FICO range at
+# origination, summarised by its midpoint. FICO fields are never model inputs (see keep-list).
+INCUMBENT_SCORE_SQL = "(fico_range_low + fico_range_high) / 2.0"
+INCUMBENT_SCORE_NAME = "fico_mid"
 
 # --- Monitoring --------------------------------------------------------------
 PSI_THRESHOLDS = {"watch": 0.10, "action": 0.25}  # Siddiqi Ch 14 convention

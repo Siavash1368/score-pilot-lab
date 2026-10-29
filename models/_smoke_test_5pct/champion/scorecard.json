@@ -1,0 +1,39 @@
+{
+ "attributes": [
+  "new_trades_share_24m",
+  "mths_since_recent_inq",
+  "bc_open_to_buy",
+  "mort_acc",
+  "bc_util"
+ ],
+ "intercept": -2.262382497649234,
+ "coef": {
+  "new_trades_share_24m": -0.8539407588595509,
+  "mths_since_recent_inq": -1.0038158180766998,
+  "bc_open_to_buy": -0.4383197459726378,
+  "mort_acc": -0.6789130412863069,
+  "bc_util": -0.8935500819000737
+ },
+ "std_err": {
+  "new_trades_share_24m": 0.07621841456814098,
+  "mths_since_recent_inq": 0.11308434457740967,
+  "bc_open_to_buy": 0.1711700580500036,
+  "mort_acc": 0.14667607139958844,
+  "bc_util": 0.21787186011845291
+ },
+ "p_values": {
+  "new_trades_share_24m": 3.903285086358247e-29,
+  "mths_since_recent_inq": 6.887314591159975e-19,
+  "bc_open_to_buy": 0.010445347609683476,
+  "mort_acc": 3.6804700166678446e-06,
+  "bc_util": 4.108989082236163e-05
+ },
+ "base_score": 600,
+ "base_odds": 30.0,
+ "pdo": 40,
+ "n_train": 20681,
+ "bad_rate_train": 0.09433779797882114,
+ "deviance": 12577.217954040481,
+ "null_deviance": 12923.997524609511,
+ "penalty": null
+}

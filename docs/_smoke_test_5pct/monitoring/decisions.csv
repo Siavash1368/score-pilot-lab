@@ -1,0 +1,6 @@
+vintage_quarter,action,gini_drop,ordering_decayed,level_off,psi,max_csi,calib_slope,calib_intercept_shift
+2016Q1,recalibrate,-0.009,False,True,0.0143,0.0638,1.006,0.225
+2016Q2,recalibrate,-0.0265,False,True,0.0181,0.0816,1.081,0.289
+2016Q3,recalibrate,0.0054,False,True,0.0349,0.0835,1.002,0.302
+2016Q4,re-estimate,0.0335,True,True,0.0248,0.0826,0.884,0.145
+2017Q1,no action,0.0112,False,False,0.0026,0.0918,0.936,0.139

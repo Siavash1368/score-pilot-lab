@@ -1,0 +1,17 @@
+{
+ "attributes": [
+  "new_trades_share_24m",
+  "mths_since_recent_inq",
+  "bc_open_to_buy",
+  "mort_acc",
+  "bc_util"
+ ],
+ "selection": {
+  "p_enter": 0.01,
+  "max_corr": 0.7,
+  "max_attributes": 15
+ },
+ "force_in": [],
+ "force_out": [],
+ "penalty": null
+}

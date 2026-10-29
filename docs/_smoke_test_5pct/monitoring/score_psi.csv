@@ -1,0 +1,6 @@
+vintage_quarter,n,psi,critical_5pct,significant,verdict
+2016Q1,6750,0.0143,0.0033,True,stable
+2016Q2,4836,0.0181,0.0043,True,stable
+2016Q3,4918,0.0349,0.0043,True,stable
+2016Q4,5324,0.0248,0.004,True,stable
+2017Q1,4878,0.0026,0.0043,False,stable

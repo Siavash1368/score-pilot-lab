@@ -1,0 +1,60 @@
+attribute,family,missing_rate,n_distinct,auc_higher_is_riskier,gini_abs,expected_direction,empirical_direction
+new_trades_share_24m,tradelines,0.0171,543,0.5948,0.1897,riskier,riskier
+acc_open_past_24mths,tradelines,0.0171,26,0.576,0.152,riskier,riskier
+num_tl_op_past_12m,tradelines,0.0653,16,0.5676,0.1352,riskier,riskier
+mo_sin_rcnt_tl,credit_age,0.0653,93,0.4407,0.1186,safer,safer
+bc_open_to_buy,balances_utilisation,0.0264,11175,0.4454,0.1092,safer,safer
+mths_since_recent_inq,inquiries,0.1145,25,0.4457,0.1086,safer,safer
+inq_last_6mths,inquiries,0.0,8,0.5529,0.1058,riskier,riskier
+mo_sin_rcnt_rev_tl_op,credit_age,0.0653,133,0.4472,0.1056,safer,safer
+bal_ex_mort_to_limit,balances_utilisation,0.0653,19323,0.5512,0.1024,riskier,riskier
+total_bc_limit,balances_utilisation,0.0171,1652,0.4498,0.1004,safer,safer
+tot_hi_cred_lim,balances_utilisation,0.0653,17439,0.4519,0.0961,safer,safer
+mo_sin_old_rev_tl_op,credit_age,0.0653,550,0.4529,0.0942,safer,safer
+mort_acc,tradelines,0.0171,19,0.4541,0.0917,safer,safer
+avg_cur_bal,balances_utilisation,0.0653,13567,0.4558,0.0884,safer,safer
+total_rev_hi_lim,balances_utilisation,0.0653,2016,0.4577,0.0847,safer,safer
+credit_age_months,credit_age,0.0,534,0.4589,0.0821,safer,safer
+tot_cur_bal,balances_utilisation,0.0653,18499,0.4609,0.0783,no prior,safer
+bc_util,balances_utilisation,0.0,1071,0.5356,0.0711,riskier,riskier
+percent_bc_gt_75,balances_utilisation,0.0,94,0.5355,0.071,riskier,riskier
+mo_sin_old_il_acct,credit_age,0.0954,367,0.4729,0.0542,safer,safer
+num_rev_tl_bal_gt_0,tradelines,0.0653,27,0.5242,0.0484,riskier,riskier
+revol_util,balances_utilisation,0.0,1033,0.5227,0.0454,riskier,riskier
+total_acc,tradelines,0.0,86,0.4778,0.0445,safer,safer
+revol_bal,balances_utilisation,0.0,15274,0.4783,0.0434,no prior,safer
+revol_bal_to_limit,balances_utilisation,0.0655,19030,0.5193,0.0386,riskier,riskier
+mths_since_recent_revol_delinq,delinquency,0.6724,101,0.5186,0.0373,safer,riskier
+num_bc_tl,tradelines,0.0653,43,0.4847,0.0307,safer,safer
+pct_tl_nvr_dlq,delinquency,0.0,309,0.5102,0.0203,safer,riskier
+num_actv_bc_tl,tradelines,0.0653,20,0.5101,0.0203,no prior,riskier
+mths_since_last_major_derog,delinquency,0.7686,104,0.5097,0.0194,safer,riskier
+mths_since_last_delinq,delinquency,0.5265,94,0.5087,0.0174,safer,riskier
+num_rev_accts,tradelines,0.0653,65,0.4913,0.0174,safer,safer
+mths_since_recent_bc_dlq,delinquency,0.7662,96,0.5085,0.0171,safer,riskier
+total_bal_ex_mort,balances_utilisation,0.0171,18143,0.4922,0.0155,no prior,safer
+num_il_tl,tradelines,0.0653,60,0.494,0.012,no prior,safer
+ever_delinquent_flag,delinquency,0.0,2,0.4954,0.0093,riskier,safer
+delinq_2yrs,delinquency,0.0,15,0.4954,0.0092,riskier,safer
+num_bc_sats,tradelines,0.0377,27,0.5041,0.0083,safer,riskier
+tot_coll_amt,derogatory,0.0653,1179,0.5029,0.0058,riskier,riskier
+pub_rec,derogatory,0.0,12,0.5025,0.0051,riskier,riskier
+num_sats,tradelines,0.0377,44,0.5026,0.0051,safer,riskier
+open_acc,tradelines,0.0,45,0.5025,0.0049,no prior,riskier
+any_derog_flag,derogatory,0.0,2,0.5023,0.0045,riskier,riskier
+tax_liens,derogatory,0.0,12,0.5017,0.0033,riskier,riskier
+chargeoff_within_12_mths,derogatory,0.0,3,0.4988,0.0024,riskier,safer
+pub_rec_bankruptcies,derogatory,0.0,7,0.5011,0.0023,riskier,riskier
+num_tl_90g_dpd_24m,delinquency,0.0653,12,0.4989,0.0022,riskier,safer
+mths_since_last_record,derogatory,0.8594,118,0.5009,0.0017,safer,riskier
+acc_now_delinq,delinquency,0.0,4,0.5008,0.0016,riskier,riskier
+collections_12_mths_ex_med,derogatory,0.0,3,0.5007,0.0014,riskier,riskier
+num_tl_120dpd_2m,delinquency,0.083,2,0.5004,0.0007,riskier,riskier
+num_tl_30dpd,delinquency,0.0653,4,0.5001,0.0002,riskier,riskier
+inq_last_12m,inquiries,1.0,0,,,riskier,
+open_rv_24m,tradelines,1.0,0,,,riskier,
+open_il_24m,tradelines,1.0,0,,,riskier,
+all_util,balances_utilisation,0.0,1,,,riskier,
+il_util,balances_utilisation,0.0,1,,,riskier,
+max_bal_bc,balances_utilisation,1.0,0,,,no prior,
+mths_since_rcnt_il,credit_age,1.0,0,,,safer,

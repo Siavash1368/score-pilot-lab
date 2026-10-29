@@ -1,0 +1,11 @@
+attribute,iv,bins,monotone,direction,missing_own_bin,strength
+new_trades_share_24m,0.1097,8,True,1,False,medium
+acc_open_past_24mths,0.0732,6,True,1,False,weak
+mths_since_recent_inq,0.0464,6,True,-1,True,weak
+inq_last_6mths,0.0407,4,True,1,False,weak
+bc_open_to_buy,0.0383,7,True,-1,True,weak
+total_bc_limit,0.0332,7,True,-1,False,weak
+mort_acc,0.0308,5,True,-1,False,weak
+credit_age_months,0.0252,7,True,-1,False,weak
+bc_util,0.0229,6,True,1,False,weak
+percent_bc_gt_75,0.021,4,True,1,False,weak

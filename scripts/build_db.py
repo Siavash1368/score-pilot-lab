@@ -10,7 +10,7 @@ then cast column by column into a typed table:
   ``dti`` percent -> DOUBLE.
 
 Then the views ``v_accepted_asof`` (leakage-control keep-list), ``v_target`` and
-``v_split`` (stubs until notebook 02) are created and row/column counts printed.
+``v_split`` (from ``scorelab.target``) are created and row/column counts printed.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from pathlib import Path
 import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from scorelab import config  # noqa: E402
+from scorelab import config, target  # noqa: E402
 
 # --- accepted: expected header and explicit types ---------------------------
 
@@ -238,33 +238,10 @@ def build_views(con: duckdb.DuckDBPyConnection) -> None:
     con.execute("CREATE VIEW v_accepted_asof AS SELECT "
                 + ", ".join(q(c) for c in fields) + " FROM accepted")
 
-    # Stub: vintage and censoring flag only. bad stays NULL until NB02 implements scorelab.target.
-    cut = f"DATE '{config.DATA_CUT}'"
-    con.execute(f"""
-        CREATE VIEW v_target AS
-        SELECT id,
-               issue_d,
-               year(issue_d) AS vintage_year,
-               year(issue_d) || 'Q' || quarter(issue_d) AS vintage_quarter,
-               CAST(NULL AS INTEGER) AS bad,  -- TODO(NB02): 24-month bad definition
-               CAST(issue_d + INTERVAL {config.PERFORMANCE_WINDOW_MONTHS} MONTH <= {cut} AS INTEGER)
-                   AS observable
-        FROM v_accepted_asof
-    """)
-
-    # Stub split by vintage: OOT is the whole of 2016 and monitor is MONITOR_VINTAGES (2017Q1 on).
-    train = ", ".join(str(y) for y in config.TRAIN_VINTAGES)
-    mon_lo, mon_hi = config.MONITOR_VINTAGES
-    con.execute(f"""
-        CREATE VIEW v_split AS
-        SELECT *,
-               CASE WHEN vintage_year IN ({train}) THEN 'train'
-                    WHEN vintage_year = {config.VALIDATE_VINTAGE} THEN 'validate'
-                    WHEN vintage_year = {config.OOT_VINTAGE} THEN 'oot'
-                    WHEN vintage_quarter BETWEEN '{mon_lo}' AND '{mon_hi}' THEN 'monitor'
-               END AS split  -- NULL = pre-{min(config.TRAIN_VINTAGES)} vintages, not used
-        FROM v_target
-    """)
+    # v_target (24-month label, indeterminates, early indicator) and v_split (exclusive vintage
+    # split) are defined once in scorelab.target so notebooks, the MCP server and the agent read
+    # the same SQL. scripts/refresh_views.py recreates them without rebuilding the tables.
+    target.create_views(con)
 
 
 def print_counts(con: duckdb.DuckDBPyConnection) -> None:

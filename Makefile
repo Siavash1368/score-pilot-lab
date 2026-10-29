@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: data db test dashboard
+.PHONY: data db views test dashboard
 
 ## Download the Kaggle dataset into data/raw/ and the data dictionary into data/reference/
 data:
@@ -9,6 +9,10 @@ data:
 ## Build data/lc.duckdb (tables accepted, rejected; views v_accepted_asof, v_target, v_split)
 db:
 	$(PYTHON) scripts/build_db.py
+
+## Recreate v_target and v_split on the existing database (after editing scorelab.config / target)
+views:
+	$(PYTHON) scripts/refresh_views.py
 
 ## Run the test suite
 test:

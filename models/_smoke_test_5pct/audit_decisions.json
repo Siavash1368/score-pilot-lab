@@ -1,0 +1,12 @@
+{
+ "structural_gap_fields": [
+  "all_util",
+  "il_util",
+  "inq_last_12m",
+  "max_bal_bc",
+  "mths_since_last_record",
+  "mths_since_rcnt_il",
+  "open_il_24m",
+  "open_rv_24m"
+ ]
+}
