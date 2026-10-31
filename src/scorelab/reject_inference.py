@@ -87,15 +87,60 @@ def fuzzy_augmentation(frame: pd.DataFrame, p_bad_declined: np.ndarray) -> pd.Da
     return out
 
 
+def self_training(frame: pd.DataFrame, fit_fn: Callable[[pd.DataFrame], object],
+                  score_fn: Callable[[object, pd.DataFrame], np.ndarray], step: float = 0.25,
+                  max_iter: int = 20) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Semi-supervised view: label the declines a slice at a time with the current model, refitting
+    on approved + pseudo-labelled rows after each slice (self-training, Yarowsky 1995).
+
+    Each round takes ``step`` of the declines from the confident tails of the current prediction:
+    the riskiest ``k * mean(p)`` as bad and the safest ``k * (1 - mean(p))`` as good, so the pseudo
+    bad rate tracks the model's own expectation instead of a 0.5 threshold (which, at a ~10% bad rate,
+    would label everything good). Returns the augmented frame and a per-round history; when
+    ``bad_hidden`` is present the history also reports the accuracy of each round's pseudo-labels."""
+    out = frame.copy(); out["weight"] = 1.0
+    dec_idx = out.index[out["declined"]]
+    remaining = list(dec_idx)
+    labelled = out.loc[~out["declined"]].copy()
+    k = max(1, int(np.ceil(step * len(dec_idx))))
+    hist = []
+    for it in range(1, max_iter + 1):
+        if not remaining:
+            break
+        model = fit_fn(labelled)
+        rem = out.loc[remaining]
+        p = np.asarray(score_fn(model, rem), dtype=float)
+        take = min(k, len(rem)) if it < max_iter else len(rem)
+        n_bad = int(round(take * p.mean()))
+        order = np.argsort(p)                                  # safest first
+        bad_pos, good_pos = order[len(order) - n_bad:], order[:take - n_bad]
+        new = pd.Series(np.nan, index=rem.index)
+        new.iloc[good_pos] = 0.0; new.iloc[bad_pos] = 1.0
+        new = new.dropna()
+        out.loc[new.index, "bad"] = new
+        labelled = pd.concat([labelled, out.loc[new.index]])
+        done = set(new.index)
+        remaining = [i for i in remaining if i not in done]
+        row = {"round": it, "n_pseudo_labelled": int(len(new)), "pseudo_bad_rate": float(new.mean()),
+               "mean_p_remaining": float(p.mean()), "n_remaining": len(remaining)}
+        if "bad_hidden" in out:
+            row["pseudo_label_accuracy"] = float((out.loc[new.index, "bad_hidden"] == new).mean())
+        hist.append(row)
+    out["method"] = "self_training"
+    return out, pd.DataFrame(hist)
+
+
 # --- Evaluation against hidden truth -------------------------------------------------------
 
 def compare_methods(sim: pd.DataFrame, fit_fn: Callable[[pd.DataFrame], object],
                     score_fn: Callable[[object, pd.DataFrame], np.ndarray], eval_frame: pd.DataFrame,
-                    cutoff: float | None = None, multipliers=(1.0, 1.5)) -> pd.DataFrame:
+                    cutoff: float | None = None, multipliers=(1.0, 1.5), include_self_training: bool = True,
+                    self_training_step: float = 0.25) -> pd.DataFrame:
     """Fit KGB on approved only, then each augmentation; score ``eval_frame`` (truth known) and the
     simulated through-the-door population; report Gini on all, on the approved, on the declined.
 
-    ``fit_fn`` must accept a frame with columns ``bad`` and ``weight`` (weight may be absent)."""
+    ``fit_fn`` must accept a frame with columns ``bad`` and ``weight`` (weight may be absent).
+    ``include_self_training`` adds the semi-supervised method (:func:`self_training`)."""
     approved = sim[~sim["declined"]].copy(); approved["weight"] = 1.0
     kgb = fit_fn(approved)
     p_dec = score_fn(kgb, sim[sim["declined"]])
@@ -104,6 +149,8 @@ def compare_methods(sim: pd.DataFrame, fit_fn: Callable[[pd.DataFrame], object],
     for m in multipliers:
         variants[f"parceling_x{m:g}"] = parceling(sim, p_dec, bad_rate_multiplier=m)
     variants["fuzzy_augmentation"] = fuzzy_augmentation(sim, p_dec)
+    if include_self_training:
+        variants["self_training"] = self_training(sim, fit_fn, score_fn, step=self_training_step)[0]
     rows = []
     truth = sim["bad_hidden"].to_numpy(dtype=float)
     for name, aug in variants.items():

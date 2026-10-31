@@ -1,0 +1,7 @@
+,"GBM, all candidates","GBM, card attributes only"
+n,3000.0,3000.0
+mean_overlap,1.501,3.001
+share_same_first_reason,0.8403333333333334,0.835
+share_no_reason_in_common,0.023666666666666666,0.0
+share_full_agreement,0.0,0.685
+mean_rank_gap_shared,0.25873449413906907,0.547

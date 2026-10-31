@@ -63,7 +63,9 @@ def delong_test(y, x1, x2, higher_is_safer: bool = True) -> dict:
     diff = a1 - a2; var = S[0, 0] + S[1, 1] - 2 * S[0, 1]
     z = diff / np.sqrt(var) if var > 0 else np.nan
     p = 2 * (1 - stats.norm.cdf(abs(z))) if z == z else np.nan
-    return {"auc_1": float(a1), "auc_2": float(a2), "gini_diff": float(2 * diff), "z": float(z), "p_value": float(p)}
+    se = 2 * float(np.sqrt(var)) if var > 0 else 0.0          # SE of the Gini difference
+    return {"auc_1": float(a1), "auc_2": float(a2), "gini_diff": float(2 * diff), "gini_diff_se": se,
+            "gini_diff_ci": (float(2 * diff - 1.96 * se), float(2 * diff + 1.96 * se)), "z": float(z), "p_value": float(p)}
 
 
 def bootstrap_gini_diff(y, x1, x2, higher_is_safer: bool = True, n_boot: int = 500, seed: int = 42) -> dict:
@@ -187,6 +189,46 @@ def probability_scores(y, p) -> dict:
             "reliability": reliability, "resolution": resolution, "uncertainty": uncertainty,
             "brier_check": reliability - resolution + uncertainty,
             "null_log_loss": float(_log_loss(y, np.full(len(y), ybar)))}
+
+
+# --- Model comparison ---------------------------------------------------------------------------
+
+def model_comparison(y, preds: dict[str, np.ndarray], reference: str | None = None,
+                     fit_seconds: dict[str, float] | None = None, notes: dict[str, str] | None = None,
+                     inputs: dict[str, str] | None = None) -> pd.DataFrame:
+    """One row per model on the same rows: its input set, AUC and Gini with DeLong 95% CI, KS, Brier,
+    log-loss, Cox calibration slope and intercept-only shift, fit time and an explainability note.
+
+    ``preds`` maps model name -> probability of bad. With ``reference`` (a key of ``preds``), each
+    row also carries its Gini difference from the reference with the paired DeLong 95% CI, whether
+    that CI excludes zero, and the p-value."""
+    y = np.asarray(y, dtype=int)
+    rows = []
+    for name, p in preds.items():
+        p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+        d = delong_ci(y, p, higher_is_safer=False)
+        cal = calibration_slope_intercept(y, np.log(p / (1 - p)))
+        row = {"model": name, "inputs": (inputs or {}).get(name, ""), "auc": d["auc"], "gini": d["gini"],
+               "gini_ci_low": d["gini_ci"][0],
+               "gini_ci_high": d["gini_ci"][1], "ks": auc_gini_ks(y, p, higher_is_safer=False)["ks"],
+               "brier": float(brier_score_loss(y, p)), "log_loss": float(_log_loss(y, p)),
+               "calib_slope": cal["slope"], "calib_in_the_large": cal["intercept_only_shift"]}
+        if reference is not None:
+            if name == reference:
+                row.update({"gini_vs_ref": 0.0, "gini_vs_ref_ci_low": np.nan, "gini_vs_ref_ci_high": np.nan,
+                            "ci_excludes_zero": None, "delong_p_vs_ref": np.nan})
+            else:
+                t = delong_test(y, p, preds[reference], higher_is_safer=False)
+                lo, hi = t["gini_diff_ci"]
+                row.update({"gini_vs_ref": t["gini_diff"], "gini_vs_ref_ci_low": lo, "gini_vs_ref_ci_high": hi,
+                            "ci_excludes_zero": bool(lo > 0 or hi < 0), "delong_p_vs_ref": t["p_value"]})
+        row["fit_seconds"] = (fit_seconds or {}).get(name, np.nan)
+        row["explainability"] = (notes or {}).get(name, "")
+        rows.append(row)
+    out = pd.DataFrame(rows)
+    num = out.select_dtypes("number").columns
+    out[num] = out[num].round(4)
+    return out
 
 
 # --- Stability --------------------------------------------------------------------------------

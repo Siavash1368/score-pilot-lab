@@ -25,3 +25,6 @@ __pycache__/
 
 # Share bundles for the planning chat
 handoff/
+
+# JupyterLab desktop workspace state
+.jupyter/

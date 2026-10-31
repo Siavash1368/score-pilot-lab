@@ -1,0 +1,36 @@
+# core analytics
+duckdb
+pandas
+numpy
+scipy
+scikit-learn
+statsmodels
+optbinning
+xgboost
+lightgbm
+shap
+matplotlib
+python-dotenv
+
+# extended modelling (NB07b): hyper-parameter search, EBM
+optuna
+interpret-core
+
+# dev tools
+pytest
+ruff
+mlflow
+streamlit
+kaggle
+
+# AI part (MCP, agent)
+anthropic
+mcp
+httpx
+
+# notebooks
+ipykernel
+jupyter
+
+# this project's own package (scorelab), editable
+-e .

@@ -140,3 +140,23 @@ def test_prior_correction_roundtrip():
     assert target.prior_correct_intercept(0.0, 0.5, 0.1) == pytest.approx(-math.log(9))
     with pytest.raises(ValueError):
         target.prior_correct_intercept(0.0, 0.0, 0.1)
+
+
+def test_sample_predicate_is_deterministic_nested_and_seeded():
+    con = duckdb.connect()
+    con.execute("SET threads=8")
+    con.execute("CREATE TABLE s AS SELECT range AS id FROM range(200000)")
+    con.execute("CREATE TABLE a AS SELECT range AS id, range % 7 AS x FROM range(200000)")
+
+    def draw(frac, seed=42):
+        q = f"SELECT s.id FROM s JOIN a USING (id) WHERE a.x >= 0 {target.sample_predicate(frac, seed, 's.id')}"
+        return set(con.execute(q).df().id)
+
+    first = draw(0.05)
+    assert all(draw(0.05) == first for _ in range(3))                   # same rows every run, after a join
+    assert len(first) / 200000 == pytest.approx(0.05, abs=0.003)
+    assert first <= draw(0.10)                                          # smaller sample nested in larger
+    assert len(first & draw(0.05, seed=7)) < 0.2 * len(first)           # another seed, another draw
+    assert target.sample_predicate(None) == ""
+    with pytest.raises(ValueError):
+        target.sample_predicate(1.5)

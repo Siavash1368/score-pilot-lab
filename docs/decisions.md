@@ -55,3 +55,47 @@ Source: Kaggle `wordsforthewise/lending-club`.
   2026-10-27 entry above), candidate attributes (NB03), bins and the CSI screen (NB04), selection rules (NB05),
   reject-inference method (NB06), thresholds carried back from the GBM (NB07), approval rate, segments, fairness
   proxy, interpretations and caveats (NB08), monitoring thresholds and plan (NB09).
+
+## 2026-10-30 — Extended modelling (NB07b–07e, NB06 self-training)
+
+- **Scope.** Built: challenger zoo (RF, EBM, MLP, stacked ensemble alongside XGBoost/LightGBM) with Optuna
+  tuning, explainability and interaction carry-back, a discrete-time survival model, self-training reject
+  inference, and an illustrative DML estimate. Not attempted, because Lending Club cannot support them: an
+  account-management (behaviour) model, which needs monthly account performance, and a real fair-lending LDA
+  search, which needs protected-class data or a validated proxy. Both are covered in a separate module.
+- **No leakage into 2016.** Every Optuna trial, the MLP's early stopping and the stack's meta-model use the
+  2015 validation vintage only. 2016 is used once, in the NB07b comparison table.
+- **Packages.** `optuna` and `interpret-core` approved 2026-10-30 and installed in the project `.venv` (optuna
+  5.0.0, interpret 0.7.8), which is the environment JupyterLab uses. No PyTorch: the MLP is sklearn's
+  `MLPClassifier`. Both packages are listed under the `extended` extra in `pyproject.toml`.
+- **Input sets are held fixed so model effects and input effects can be told apart.** The GBMs, random
+  forest, EBMs and one MLP all use the same 29 NB03 candidates. A second MLP uses the 10 NB04 WOE attributes.
+  The comparison table has an `inputs` column. Raw MLP inputs are median-imputed, with one missing-indicator
+  column per attribute that has missing values, then standardised. All of this is fitted on 2012–14 only
+  (no zero-fill or mean-fill). An attribute missing at scoring time but never missing in training raises a
+  warning instead of being imputed silently.
+- **EBM.** With monotone constraints, interpret fits main effects only (pairwise terms are dropped), so
+  NB07b fits two EBMs: monotone with main effects, and unconstrained with 10 pairs.
+- **Survival.** A multinomial discrete-time hazard with three outcomes (continue, default, prepay), with
+  continue as the reference; default and prepay log-hazards are reported against continue. Prepayment is a
+  competing risk, not censoring, so that CIF(24) is
+  the probability of the label event and compares directly with the card's PD. Event timing uses the same
+  last-payment reconstruction as the label; `exit_type == 'default'` exactly when `label == 'bad'`.
+- **Self-training.** Each round pseudo-labels a quarter of the declines from the confident tails of the
+  current model. The bad share of each round equals the model's mean predicted PD, not a 0.5 threshold,
+  which at a ~10% bad rate would label every decline good.
+- **DML controls.** Bureau candidates plus amount, income, DTI, employment length, purpose and home
+  ownership. Rate, grade and instalment are excluded as post-treatment (the lender prices the chosen term).
+
+## 2026-10-30 — Reproducible samples and row order
+
+- **Sampling by id hash.** `SAMPLE_FRAC` and the 07e causal sample used DuckDB's `USING SAMPLE (bernoulli, seed)`,
+  which is only repeatable on a single thread. After a join, it gave a different set of rows on different
+  runs. Rows are now kept when md5("<id>:<seed>") mod 10^6 < frac × 10^6 (`target.sample_predicate`). The result
+  depends only on the id, and a smaller sample is always nested in a larger one with the same seed.
+- **Fixed row order.** `modeling_frame` and `causal_frame` now `ORDER BY id`. Without it, multi-threaded queries
+  returned the same rows in a different order, which changed every model that subsamples, bootstraps or
+  shuffles rows (XGBoost, LightGBM, random forest, EBM, MLP, DML folds). The GLM scorecard was unaffected.
+  Two consecutive NB07b runs now give byte-identical tuned models and identical comparison tables.
+- **Consequence.** The 5% smoke sample changed with this fix, so smoke numbers from before 2026-10-30 evening
+  are not comparable with later ones.

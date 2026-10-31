@@ -1,0 +1,4 @@
+pair,thresholds,iv,entered,gini_before,gini_after,gini_gain,p_value
+percent_bc_gt_75_x_new_trades_share_24m,"(56.2, 0.207)",0.0986,True,0.2492,0.2459,-0.0033,0.1671
+mths_since_recent_inq_x_new_trades_share_24m,"(3.0, 0.207)",0.1082,False,0.2492,0.2488,-0.0004,0.7456
+new_trades_share_24m_x_bal_ex_mort_to_limit,"(0.207, 0.614)",0.0998,True,0.2492,0.2534,0.0042,0.2191

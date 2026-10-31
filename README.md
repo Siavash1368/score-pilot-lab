@@ -1,156 +1,174 @@
 # score-pilot-lab
 
-A bureau-attribute PD scorecard on Lending Club 2007–2018, built the way a score vendor develops and
-pilots a score: inputs limited to bureau attributes known at application, a 24-month bad definition,
-a vintage split with a true out-of-time test, a WOE logistic scorecard scaled to 300–850 with
-adverse-action reason codes, reject inference, monotonic GBM challengers, a vendor-style pilot report
-with swap sets against FICO, and PSI/CSI monitoring. The analytics are exposed as read-only MCP tools
-driven by a Claude agent and checked by an evaluation harness.
+This is a consumer credit scorecard built on Lending Club loans from 2007 to 2018, developed and tested the way a score vendor would take a new score to a lender. The model sees only what was known on the day of the application, predicts serious delinquency over the first two years of the loan, and is judged against FICO on loans it never saw during development.
 
-## Quick start
+The analytics are written once, in a small Python package, and the notebooks call it rather than repeating the work. Every number in a report therefore comes from the same code path as the number in the notebook.
+
+## What the project covers
+
+The work follows the order a model developer would actually go through.
+
+It starts with a data audit: which fields exist in which years, where reporting has gaps, and which loans belong in scope. The target and the sample come next. A loan is bad if it reaches 90 or more days past due within 24 months of issue, and loans are split by vintage into training, validation, an out-of-time test year and a monitoring period.
+
+From there the project builds an attribute library limited to fields known at application, groups each attribute into monotone bins with weight of evidence, and fits a logistic scorecard. The scorecard is scaled to a 300 to 850 range and produces adverse-action reason codes for every applicant.
+
+Two pieces test the scorecard's assumptions. Reject inference asks how much the model is distorted by having learned only from approved loans. Gradient-boosting challengers (XGBoost and LightGBM, with monotone constraints) ask how much performance a more flexible model would add, and whether that gain survives once it has to be explained.
+
+The pilot report is written the way a lender would read it: discrimination with confidence intervals, calibration by score band, gains tables, and swap sets against FICO at a matched approval rate, meaning the applicants the new score would approve that FICO declines and the reverse. The last step is monitoring, with population and characteristic stability over time and a simple rule for when to recalibrate, re-estimate or rebuild.
+
+## Data
+
+The source is the public Lending Club data on Kaggle: one file of accepted loans and one of rejected applications. Both are loaded into a local DuckDB database with explicit types.
+
+| Object | Rows | What it is |
+|---|---:|---|
+| `accepted` | 2,260,668 | Every funded loan, 151 columns, issued June 2007 to December 2018 |
+| `rejected` | 27,648,741 | Rejected applications, nine columns, no outcome |
+| `v_accepted_asof` | 2,260,668 | Accepted loans restricted to fields known at application (71 columns) |
+| `v_target` | 2,260,668 | One row per loan with the 24-month label and its supporting flags |
+| `v_split` | 2,260,668 | `v_target` plus the development role of each loan |
+
+The accepted file has 33 trailing summary lines ("Total amount funded in policy code ...") that are not loans; they are dropped at load time. Kaggle's archive does not include Lending Club's data dictionary, so field meanings are taken from the column names and Lending Club's public documentation.
+
+Every notebook after the first reads `v_accepted_asof`, never the raw table. The list of allowed fields lives in `data/reference/as_of_application_fields.csv`, which makes the leakage control a file you can read and review rather than a habit. FICO at origination is kept as the benchmark the new score is compared against.
+
+## How the target is built
+
+Lending Club does not publish a monthly payment history. Each loan has a final status (Fully Paid, Charged Off, Current, Late and so on) and the date of its last payment. The 24-month label is reconstructed from those two fields: for a loan that ended badly, the month of the last payment plus three missed payments gives an estimate of when it reached 90 days past due. If that falls within 24 months of issue, the loan is bad.
+
+This is a proxy, and it is described as one. A borrower who fell 90 days behind, caught up and later paid off the loan looks like a good loan in this data, so the observed bad rate is a lower bound on the true one. Partial payments while delinquent also push the estimated date later than it really was. The reasoning and the exact rules are recorded in `docs/decisions.md` (entry of 27 October 2026).
+
+A loan only gets a label once its full 24-month window has closed. The data snapshot is 1 March 2019, so loans issued after March 2017 have no 24-month label. They are kept for stability monitoring and for an early indicator with a shorter horizon, but they are never used to fit or test the model. Loans with mild delinquency that is neither clearly good nor clearly bad are marked indeterminate and left out of fitting.
+
+## Sample design
+
+Loans are split by issue year, so every test is out of time as well as out of sample.
+
+| Role | Issue dates | Bad | Good | Indeterminate | Bad rate |
+|---|---|---:|---:|---:|---:|
+| Train | 2012 to 2014 | 40,187 | 377,210 | 6,413 | 9.63% |
+| Validate | 2015 | 47,469 | 366,822 | 6,804 | 11.46% |
+| Out-of-time test | 2016 | 51,546 | 376,693 | 6,168 | 12.04% |
+| Monitor (labeled) | Jan to Mar 2017 | 10,214 | 85,005 | 1,560 | 10.73% |
+
+Bad rate is bad divided by bad plus good. Loans issued before 2012 (42,535) are out of scope, and loans from April 2017 onward are monitored without labels.
+
+The bad rate rises from about 9.6% in training to 12.0% in the test year. A model fit on 2012 to 2014 can rank 2016 borrowers well and still under-predict their risk, so the pilot report checks calibration by score band separately from ranking.
+
+The first notebook also shows that a block of bureau fields is missing for the early part of 2012 and another block only exists from 2016. Where training starts (`config.TRAIN_VINTAGES`) is decided there, and changing it means rebuilding the views with `make views`.
+
+## Getting started
+
+The project needs Python 3.11 or 3.12, a Kaggle API token, and about 8 GB of free disk for the raw files and the database. The commands below are for Windows PowerShell; on macOS or Linux, activate the environment with `source .venv/bin/activate` instead.
 
 ```bash
-pip install -e ".[dev]"
-make data        # Kaggle download -> data/raw/, data dictionary -> data/reference/
-make db          # CSVs -> data/lc.duckdb with typed tables and views
-make views       # recreate v_target / v_split after a target change (no table rebuild)
-make test
-make dashboard   # Streamlit PSI/CSI (once notebook 09 exists)
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python -m ipykernel install --user --name score-pilot-lab
 ```
 
-Requirements: Python 3.11 or 3.12, a Kaggle API token (`~/.kaggle/kaggle.json` or
-`~/.kaggle/access_token`), and roughly 8 GB of free disk for the raw CSVs plus the DuckDB file.
-On Windows without GNU make, `mingw32-make` works with the same targets, or run the scripts directly
-(`python scripts/download_data.py`, `python scripts/build_db.py`).
+`requirements.txt` installs the analytics, the developer tools, Jupyter, and the project itself in editable mode. Use it to install; `requirements-lock.txt` records the exact versions used for the results.
 
-Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` before using the agent. `RAW_DATA_DIR`
-and `DUCKDB_PATH` in `.env` move the raw CSVs and the database out of the repo. Use them when the repo
-sits in a synced folder (OneDrive, Dropbox). This checkout keeps them in
-`C:/Users/siava/score-pilot-lab-data/` because the repo is on the OneDrive Desktop.
-`data/reference/` always stays in the repo.
+Copy `.env.example` to `.env`. If the repository sits in a synced folder such as OneDrive or Dropbox, set `RAW_DATA_DIR` and `DUCKDB_PATH` there to keep the large files outside it.
 
-## Layout
+Then build the data and check that everything runs:
 
-| Path | What it holds |
-|---|---|
-| `data/raw/` | Kaggle CSVs `accepted_2007_to_2018Q4.csv`, `rejected_2007_to_2018Q4.csv` (git-ignored) |
-| `data/lc.duckdb` | Built by `scripts/build_db.py` (git-ignored) |
-| `data/reference/as_of_application_fields.csv` | Leakage-control keep-list: the only accepted-loan columns modelling may read |
-| `data/reference/lc_data_dictionary.csv` | CSV copy of Kaggle's `LCDataDictionary.xlsx` |
-| `docs/model_card.md` | Fixed card the agent reads: bad definition, window, thresholds, rules |
-| `docs/model_document.md` | SR 11-7 model document, filled in as notebooks complete |
-| `docs/pilot_report/` | Pilot white paper written by notebook 08 |
-| `docs/decisions.md` | Dated log of design decisions (raw-file checksums are recorded here) |
-| `notebooks/01`–`14` | One notebook per step; each starts with the same three setup cells |
-| `scripts/` | `download_data.py` (Kaggle CLI + checksums), `build_db.py` (CSV → DuckDB) |
-| `src/scorelab/` | All analytics (see **Modules** below). `config.py` holds paths and constants; `data.py` is the only DuckDB entry point |
-| `models/` | Artifacts the notebooks hand to each other: `candidate_attributes.json` (NB03), `bins.json` (NB04), `champion/` (NB05), `challenger_xgb.json` (NB07). `_smoke_test_5pct/` holds an example run on a 5% sample, not a result |
-| `mcp_server/server.py` | Six read-only MCP tools over `lc.duckdb` and saved models |
-| `agent/` | Pilot analyst tool-use loop, validator (stretch), system prompts |
-| `evals/` | JSON cases and `run_evals.py` (numeric faithfulness, reason codes, refusals) |
-| `finetune/` | Reason-code → plain-language dataset and LoRA training |
-| `dashboard/app.py` | Streamlit PSI/CSI dashboard |
-| `tests/` | pytest suite |
+```bash
+make data        # download from Kaggle into the raw data folder
+make db          # load the CSVs into DuckDB with typed tables and views
+make views       # rebuild v_target and v_split after changing the target or scope
+make test
+```
 
-**Rule:** notebooks stay thin and call `src/scorelab`. The MCP server and the agent import the same
-functions, so every number in a pilot report and in the agent's output comes from one code path.
-
-### DuckDB objects
-
-| Object | Kind | Definition |
-|---|---|---|
-| `accepted` | table | All columns of the accepted file, explicitly typed. `Mon-YYYY` columns are `DATE` (first of month); `int_rate`, `revol_util` are `DOUBLE` percent; `emp_length` is `INTEGER` years |
-| `rejected` | table | `amount_requested, application_date, loan_title, risk_score, dti, zip_code, state, emp_length, policy_code` |
-| `v_accepted_asof` | view | `accepted` restricted to the keep-list in `data/reference/as_of_application_fields.csv`. Every notebook after 01 reads this, never `accepted` |
-| `v_target` | view | One row per accepted loan: `vintage_year/quarter, term_months, loan_status, months_to_last_payment, exclusion, observable, bad, indeterminate, label, early_observable, early_bad`. 24-month 90+ DPD label reconstructed from `last_pymnt_d` (see `docs/decisions.md`, 2026-10-27); labels NULL where the window is not observable at the 2019-03-01 snapshot. Defined in `scorelab.target`; refresh with `python scripts/refresh_views.py` |
-| `v_split` | view | `v_target` plus `split` ∈ {train 2012–14, validate 2015, oot 2016, monitor 2017Q1–2018Q4}; NULL for pre-2012 vintages |
-
-
-## Modules (`src/scorelab`)
-
-| Module | What it does | Notebook | Wrapped later as an MCP tool |
-|---|---|---|---|
-| `target` | `v_target` / `v_split` SQL (24-month 90+ DPD label, indeterminates, early indicator), vintage curves, window sensitivity, `modeling_frame`, prior correction | 02 | — |
-| `data` | DuckDB connection and read-only loaders; profiling helpers (missingness by vintage, numeric and categorical profiles, incumbent coverage) | 01 | `sql_readonly` |
-| `attributes` | Attribute registry (family, meaning, expected direction, missing semantics), `build_attributes`, `leakage_check`, availability and univariate screens | 03 | — |
-| `binning` | Monotone coarse classing with population and bad-count minimums, WOE/IV, fixed-edge overrides, categorical grouping, CSI, save/load | 04 | — |
-| `scorecard` | Logistic fit with SEs and deviance, stepwise selection with sign and correlation guards, PDO scaling, points table, scoring, reason codes, odds table, save/load | 05 | `score_applicant`, `reason_codes` |
-| `reject_inference` | Simulated reject region with hidden truth; hard cutoff, parceling, fuzzy augmentation; comparison against truth; through-the-door profile from the rejected file | 06 | — |
-| `challengers` | XGBoost / LightGBM with monotone and interaction constraints, native TreeSHAP, GBM reason codes, surrogate tree, split-to-attribute translation, interaction strength | 07 | — |
-| `validation` | AUC/Gini/KS, DeLong CI and paired test, bootstrap, gains tables, swap sets, calibration by band and slope/intercept, Hosmer–Lemeshow, log-loss/Brier decomposition, PSI with chi-square reference | 08, 09 | `run_pilot` |
-| `fairness` | Adverse impact ratio, standardized mean difference, performance and calibration by group, less-discriminatory-alternative search | 08 | `fairness_report` |
-| `report` | `pilot_exhibits` (every pilot number from one call) and `assemble_pilot_report` (markdown) | 08 | `run_pilot` |
-| `monitoring` | PSI/CSI by period with the n-aware test, early-indicator tracking, calibration by period, drift simulation, the recalibrate / re-estimate / redevelop rule | 09 | `psi_monitor` |
+Without GNU make, run the scripts directly: `python scripts/download_data.py`, `python scripts/build_db.py` and `python scripts/refresh_views.py`.
 
 ## Working through the notebooks
 
-Each notebook (01–09) states what it settles, shows the evidence, and leaves **decision cells** (`_(write here)_`) for the modelling decisions and their reasoning. Run them in order; every notebook reads the artifacts of the previous ones from `models/`. Set `SAMPLE_FRAC` in cell 3 for a quick pass; leave it `None` for the fit that goes into the report.
+Each notebook settles one question, shows the evidence, and leaves short decision cells where the modelling choice and its reasoning are written down. They run in order, and each one reads what the previous ones saved under `models/`. Setting `SAMPLE_FRAC` in the third cell gives a quick run on a sample; leave it as `None` for the fit that goes into the report.
 
-| Notebook | Decisions you make | Writes |
+| Notebook | What it settles | What it writes |
 |---|---|---|
-| 01 Data audit | scope (years, terms, application types); fields with structural gaps | `models/audit_decisions.json`, `docs/audit/` |
-| 02 Sample design | window, bad event and indeterminates, exclusions, split, sampling | `docs/decisions.md` entry (pasted) |
-| 03 Attribute library | families and exclusions, derived attributes, candidate list | `models/candidate_attributes.json`, `docs/exhibits/` |
-| 04 Classing & WOE | binning parameters, edge overrides, IV cut and CSI screen | `models/bins.json`, `models/binning_decisions.json` |
-| 05 Scorecard | selection rules, forced in/out, penalty | `models/champion/`, `docs/exhibits/points_table.csv` |
-| 06 Reject inference | simulation design, which method the pilot reports | `docs/exhibits/reject_inference_comparison.csv` |
-| 07 Challengers | constraints and hyper-parameters, thresholds carried back to the card, champion memo | `models/challenger_xgb.json` |
-| 08 Pilot report | approval rate and segments, fairness proxy, interpretations and caveats | `docs/pilot_report/pilot_report.md` |
-| 09 Monitoring | thresholds and cadence, action per scenario, monitoring plan | `docs/monitoring/` |
+| 01 Data audit | Scope by year, term and application type; fields with structural gaps | `models/audit_decisions.json`, `docs/audit/` |
+| 02 Sample design | Window, bad event, indeterminates, exclusions, split | An entry in `docs/decisions.md` |
+| 03 Attribute library | Attribute families, derived attributes, candidate list | `models/candidate_attributes.json` |
+| 04 Classing and WOE | Binning settings, edge overrides, information-value and stability screens | `models/bins.json` |
+| 05 Scorecard | Selection rules, forced variables, scaling, reason codes | `models/champion/`, points table |
+| 06 Reject inference | Simulation design and which method the pilot reports, self-training included | Comparison table |
+| 07 Challengers | Constraints, tuning, what carries back to the scorecard | `models/challenger_xgb.json` |
+| 07b Challenger models | Which model families to compare, the tuning budget, and which challenger goes forward | `models/challenger_xgb_tuned.json`, `models/challenger_tuning.json`, comparison table |
+| 07c Explainability | Which interactions carry back into the scorecard, and whether the GBM's reason codes would hold up | Interaction and reason-code tables |
+| 07d Survival | How the hazard model is specified, and what timing adds to the scorecard | Hazard-versus-scorecard comparison, default curves by score band |
+| 07e Causal example | The controls and the estimand for the 60- versus 36-month comparison | Effect estimates (illustrative) |
+| 08 Pilot report | Approval rate, segments, fairness checks, interpretation | `docs/pilot_report/pilot_report.md` |
+| 09 Monitoring | Thresholds, cadence and the action for each drift scenario | `docs/monitoring/` |
 
-The first time through, NB01 will show that a block of bureau fields is unreported for the first part of 2012 and that another block exists only from 2016; the scope decision in NB01 (train from the month reporting starts, or from 2013, via `config.TRAIN_VINTAGES` + `make views`) is what makes the later CSI screen in NB04 clean.
+Notebooks 07b to 07e build on notebook 07. They read the champion scorecard, the candidate attributes and the bins saved by notebooks 03 to 05, and 07c also reads the tuned challenger that 07b saves. In 07b every model is tuned and early-stopped on the 2015 validation year only, so the 2016 comparison stays a true out-of-time test. It needs Optuna and interpret, and both are in `requirements.txt`.
 
-## Data status
+## The analytics package
 
-Produced 2026-10-25 20:02 by `make data`, `make db` and a headless run of notebook 01's starter cells
-(fresh kernel). On 2026-10-27 the `scorelab` modules, notebooks 01–09 and the tests were written and every notebook was executed headlessly on a 5% sample against this database (outputs in `models/_smoke_test_5pct/` and `docs/_smoke_test_5pct/`). Raw-file sizes and SHA-256 are in `docs/decisions.md`.
+All of the modelling lives in `src/scorelab`. The notebooks stay thin and call these functions.
 
-`make db` (row and column counts per object):
+| Module | What it does |
+|---|---|
+| `data` | The single DuckDB connection, read-only loaders and profiling helpers |
+| `target` | The label and split views, vintage curves, window sensitivity, prior correction |
+| `attributes` | Attribute registry with meaning, expected direction and missing-value treatment; leakage checks |
+| `binning` | Monotone coarse classing, WOE and IV, overrides, characteristic stability |
+| `scorecard` | Logistic fit with stepwise selection, sign and correlation guards, PDO scaling, reason codes |
+| `reject_inference` | A simulated reject region with known truth; hard cutoff, parceling, fuzzy augmentation and self-training |
+| `challengers` | Constrained XGBoost and LightGBM, random forest, EBM, a small neural network, a stacked ensemble; TreeSHAP, GBM reason codes, a surrogate tree |
+| `tuning` | Hyperparameter search for the GBM and the neural network, scored on the validation year only |
+| `explain` | Partial dependence, pairwise interaction strength, crossed attributes carried back into the scorecard, reason-code agreement |
+| `survival` | A discrete-time hazard by months on book, with prepayment as a competing outcome, and cumulative default curves |
+| `causal` | Double machine learning for the illustrative term comparison, with overlap checks and simple benchmarks |
+| `validation` | AUC, Gini and KS with DeLong intervals, gains tables, swap sets, calibration, PSI, a comparison table for several models |
+| `fairness` | Adverse impact ratio, standardized mean difference, group calibration, a search for a less discriminatory alternative |
+| `report` | Every pilot number from one call, and the assembled markdown report |
+| `monitoring` | PSI and CSI by period, early-indicator tracking, drift simulation, the recalibrate or rebuild rule |
 
-```
-object            kind    rows         columns
-accepted          table      2,260,668     151
-rejected          table     27,648,741       9
-v_accepted_asof   view       2,260,668      71
-v_split           view       2,260,668       7   (stub at build time; 15 after `make views`)
-v_target          view       2,260,668       6   (stub at build time; 14 after `make views`)
+## Repository layout
 
-accepted issue_d range: 2007-06-01 .. 2018-12-01
-```
+| Path | Contents |
+|---|---|
+| `data/raw/`, `data/lc.duckdb` | Downloaded files and the database (not in Git) |
+| `data/reference/` | The as-of-application field list; always kept in the repository |
+| `docs/` | Model card, model document in SR 11-7 style, decision log, pilot report, monitoring plan |
+| `notebooks/` | One notebook per step |
+| `src/scorelab/` | The analytics package; `config.py` holds paths and constants |
+| `models/` | Artifacts passed between notebooks |
+| `dashboard/` | A Streamlit view of the stability reports |
+| `scripts/`, `tests/` | Data scripts and the pytest suite |
 
-The accepted CSV has 2,260,701 data rows. The 33 rows with a non-numeric `id` (the trailing
-"Total amount funded in policy code ..." summary lines) are dropped.
+## Current state
 
-Notebook 01, cell 2:
+The database was built on 25 October 2026. The `scorelab` modules, notebooks 01 to 09 and the tests were written on 27 October and run end to end on a 5% sample; that run is kept in `models/_smoke_test_5pct/` as a working example, not as a result. The target views were rebuilt on 29 October with the counts shown above.
 
-```
-┌─────────────────┐
-│      name       │
-├─────────────────┤
-│ accepted        │
-│ rejected        │
-│ v_accepted_asof │
-│ v_split         │
-│ v_target        │
-└─────────────────┘
-┌─────────┬──────────────┬──────────────┐
-│    n    │ min(issue_d) │ max(issue_d) │
-├─────────┼──────────────┼──────────────┤
-│ 2260668 │ 2007-06-01   │ 2018-12-01   │
-└─────────┴──────────────┴──────────────┘
-```
+<!-- After the full-data run, add a "Results" section here: champion vs challenger (AUC/Gini with CIs, KS), calibration by band on the 2016 test year, the swap-set table against FICO at the matched approval rate, and the PSI summary for the monitor period. Raw-file sizes and SHA-256 checksums are in docs/decisions.md. -->
 
-`v_split` rows: train 423,810 · validate 421,095 · oot 434,407 · monitor 938,821 · pre-2012 (NULL)
-42,535.
+## Out of scope on Lending Club data
 
-Target views (`make views`, 2026-10-29). Labels by split, with bad rate = bad / (bad + good):
+Two pieces of the wider study cannot be built on this data and are not attempted here.
 
-| split | bad | good | indeterminate | bad rate |
-|---|---:|---:|---:|---:|
-| train 2012–14 | 40,187 | 377,210 | 6,413 | 9.63% |
-| validate 2015 | 47,469 | 366,822 | 6,804 | 11.46% |
-| oot 2016 | 51,546 | 376,693 | 6,168 | 12.04% |
-| monitor (2017Q1 observable at 24 mo) | 10,214 | 85,005 | 1,560 | 10.73% |
+An account-management (behaviour) model needs monthly performance on open accounts: balances, payments and utilisation over time. Lending Club publishes one snapshot per loan, not a payment history.
 
-Not yet available: `data/reference/lc_data_dictionary.csv`. The `wordsforthewise/lending-club`
-archive does not ship `LCDataDictionary.xlsx`.
+A real fair-lending search for a less discriminatory alternative needs protected-class data, or a validated proxy such as one built from surname and geography. Lending Club has neither. The `fairness` module shows the method on a geographic proxy only.
+
+Both are covered in a separate module, outside this project.
+
+## Limitations
+
+The label is a proxy built from the last payment date, and it undercounts borrowers who fell behind and later recovered.
+
+The model learns only from funded loans. The rejected file has nine fields and no outcomes, so reject inference is tested on a simulated reject region where the truth is known, and the results show how the methods behave rather than what Lending Club's rejected applicants would have done.
+
+The out-of-time split is chronological but retrospective: some of the labels used for validation matured after a model built at the start of 2016 would already have been in use.
+
+Lending Club data has no protected attributes. The fairness checks in the pilot report show the method on a proxy grouping, not a finding about real disparities.
+
+Lending Club is a marketplace lender, not a credit bureau, and its application data mixes bureau-derived fields with Lending Club's own. The model is a bureau-style scorecard in method and design, not a bureau score.
+
+## Disclaimer
+
+This is an independent project built on public data for learning and demonstration. It does not use or describe the models, data or practices of any lender or score vendor.

@@ -225,6 +225,21 @@ def indeterminate_profile(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
 
 # --- Modelling frame ----------------------------------------------------------
 
+def sample_predicate(sample_frac: float | None, seed: int = 42, id_col: str = "id") -> str:
+    """``AND ...`` clause that keeps a reproducible ``sample_frac`` share of rows, chosen by ``id``.
+
+    A row is kept when md5("<id>:<seed>") mod 10^6 < sample_frac * 10^6. Unlike DuckDB's
+    ``USING SAMPLE (bernoulli, seed)``, which is only repeatable on a single thread and depends on
+    row order after a join, the result depends on the id alone: the same rows on every run and
+    thread count, and a smaller fraction is always a subset of a larger one with the same seed."""
+    if not sample_frac:
+        return ""
+    if not 0 < sample_frac <= 1:
+        raise ValueError("sample_frac must be in (0, 1]")
+    return (f"AND md5_number(CAST({id_col} AS VARCHAR) || ':{int(seed)}') % 1000000 "
+            f"< {int(round(sample_frac * 1_000_000))}")
+
+
 def modeling_frame(con: duckdb.DuckDBPyConnection,
                    splits: tuple[str, ...] = MODEL_SPLITS,
                    include_indeterminate: bool = False,
@@ -235,14 +250,14 @@ def modeling_frame(con: duckdb.DuckDBPyConnection,
 
     Adds ``fico_mid`` (the incumbent score) and ``split``, ``bad``, ``label``. Indeterminates are
     dropped unless ``include_indeterminate`` is True (then ``bad`` is NULL for them).
-    ``sample_frac`` draws a reproducible Bernoulli sample (for exploration on a small machine:
-    the full frame is ~1.3M rows x ~80 columns).
+    ``sample_frac`` keeps a reproducible share of loans chosen by id (:func:`sample_predicate`), for
+    exploration on a small machine: the full frame is ~1.3M rows x ~80 columns. Rows come back
+    ordered by id, so models that subsample or shuffle rows are reproducible run to run.
     """
     sp = _sql_list(splits)
     cols = ", ".join(f"a.{c}" for c in columns) if columns else "a.*"
     label_filter = "" if include_indeterminate else "AND s.label IN ('bad', 'good')"
-    sample = (f"USING SAMPLE {float(sample_frac) * 100}% (bernoulli, {int(seed)})"
-              if sample_frac else "")
+    sample = sample_predicate(sample_frac, seed, id_col="s.id")
     return con.sql(f"""
         SELECT s.split, s.vintage_year, s.vintage_quarter, s.term_months, s.label,
                CASE WHEN s.label = 'bad' THEN 1 WHEN s.label = 'good' THEN 0 END AS bad,
@@ -251,7 +266,8 @@ def modeling_frame(con: duckdb.DuckDBPyConnection,
         FROM v_split s
         JOIN v_accepted_asof a USING (id)
         WHERE s.split IN ({sp}) AND s.observable = 1 AND s.exclusion IS NULL {label_filter}
-        {sample}
+          {sample}
+        ORDER BY s.id   -- fixed row order: subsampling, bagging and shuffles depend on it
     """).df()
 
 
