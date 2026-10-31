@@ -38,7 +38,7 @@ Lending Club does not publish a monthly payment history. Each loan has a final s
 
 This is a proxy, and it is described as one. A borrower who fell 90 days behind, caught up and later paid off the loan looks like a good loan in this data, so the observed bad rate is a lower bound on the true one. Partial payments while delinquent also push the estimated date later than it really was. The reasoning and the exact rules are recorded in `docs/decisions.md` (entry of 27 October 2026).
 
-A loan only gets a label once its full 24-month window has closed. The data snapshot is 1 March 2019, so loans issued after March 2017 have no 24-month label. They are kept for stability monitoring and for an early indicator with a shorter horizon, but they are never used to fit or test the model. Loans with mild delinquency that is neither clearly good nor clearly bad are marked indeterminate and left out of fitting.
+A loan only gets a label once its full 24-month window has closed. The data snapshot is 1 March 2019, so loans issued after March 2017 have no 24-month label. They are kept for stability monitoring and for an early indicator with a shorter horizon, but they are never used to fit or test the model. Loans that miss their first payment inside the 24 months but only reach 90 days past due just after it, in months 25 to 27, are boundary-timing cases rather than mild delinquencies; almost all of them later charged off. They are marked indeterminate and left out of fitting.
 
 ## Sample design
 
@@ -46,16 +46,16 @@ Loans are split by issue year, so every test is out of time as well as out of sa
 
 | Role | Issue dates | Bad | Good | Indeterminate | Bad rate |
 |---|---|---:|---:|---:|---:|
-| Train | 2012 to 2014 | 40,187 | 377,210 | 6,413 | 9.63% |
-| Validate | 2015 | 47,469 | 366,822 | 6,804 | 11.46% |
-| Out-of-time test | 2016 | 51,546 | 376,693 | 6,168 | 12.04% |
-| Monitor (labeled) | Jan to Mar 2017 | 10,214 | 85,005 | 1,560 | 10.73% |
+| Train | 2013 to 2014 | 35,005 | 329,769 | 5,669 | 9.60% |
+| Validate | 2015 | 47,405 | 366,386 | 6,793 | 11.46% |
+| Out-of-time test | 2016 | 50,591 | 369,020 | 6,007 | 12.06% |
+| Monitor (labeled) | Jan to Mar 2017 | 9,803 | 81,088 | 1,481 | 10.79% |
 
-Bad rate is bad divided by bad plus good. Loans issued before 2012 (42,535) are out of scope, and loans from April 2017 onward are monitored without labels.
+Bad rate is bad divided by bad plus good. Loans issued before 2013 (95,902, including 2,749 that did not meet Lending Club's credit policy) are out of scope, and loans from April 2017 onward are monitored without labels. Joint applications (120,710) are excluded from every role: none were issued in the training years, and the joint-application fields are left out of this version.
 
-The bad rate rises from about 9.6% in training to 12.0% in the test year. A model fit on 2012 to 2014 can rank 2016 borrowers well and still under-predict their risk, so the pilot report checks calibration by score band separately from ranking.
+The bad rate rises from about 9.6% in training to 12.1% in the test year. A model fit on 2013 to 2014 can rank 2016 borrowers well and still under-predict their risk, so the pilot report checks calibration by score band separately from ranking.
 
-The first notebook also shows that a block of bureau fields is missing for the early part of 2012 and another block only exists from 2016. Where training starts (`config.TRAIN_VINTAGES`) is decided there, and changing it means rebuilding the views with `make views`.
+The first notebook shows why training starts in 2013. A block of 21 bureau fields was not reported for loans issued from January to August 2012, so in 2012 a missing value would mark the issue date rather than anything about the borrower. Another block of seven fields only exists from 2016 and is not used. Where training starts is set in `config.TRAIN_VINTAGES`, and changing it means rebuilding the views with `make views`.
 
 ## Getting started
 
@@ -143,7 +143,7 @@ All of the modelling lives in `src/scorelab`. The notebooks stay thin and call t
 
 ## Current state
 
-The database was built on 25 October 2026. The `scorelab` modules, notebooks 01 to 09 and the tests were written on 27 October and run end to end on a 5% sample; that run is kept in `models/_smoke_test_5pct/` as a working example, not as a result. The target views were rebuilt on 29 October with the counts shown above.
+The database was built on 25 October 2026. The `scorelab` modules, notebooks 01 to 09 and the tests were written on 27 October and run end to end on a 5% sample; that run is kept in `models/_smoke_test_5pct/` as a working example, not as a result. The target views were last rebuilt on 31 October, after the scope decisions (training from 2013, joint applications excluded), with the counts shown above. Notebooks 01 and 02 have been run on the full data and their decisions recorded.
 
 <!-- After the full-data run, add a "Results" section here: champion vs challenger (AUC/Gini with CIs, KS), calibration by band on the 2016 test year, the swap-set table against FICO at the matched approval rate, and the PSI summary for the monitor period. Raw-file sizes and SHA-256 checksums are in docs/decisions.md. -->
 

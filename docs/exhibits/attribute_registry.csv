@@ -1,0 +1,60 @@
+attribute,family,meaning,direction,missing_means,derived,available_from,sources
+inq_last_6mths,inquiries,Hard inquiries in the last 6 months,riskier,no inquiries recorded,False,2012,inq_last_6mths
+inq_last_12m,inquiries,Hard inquiries in the last 12 months,riskier,field not reported,False,2016,inq_last_12m
+mths_since_recent_inq,inquiries,Months since the most recent inquiry,safer,never inquired,False,2012,mths_since_recent_inq
+delinq_2yrs,delinquency,30+ DPD incidences in the last 2 years,riskier,none,False,2012,delinq_2yrs
+mths_since_last_delinq,delinquency,Months since the last delinquency,safer,never delinquent,False,2012,mths_since_last_delinq
+mths_since_last_major_derog,delinquency,Months since the last 90+ DPD or worse,safer,never 90+,False,2012,mths_since_last_major_derog
+mths_since_recent_bc_dlq,delinquency,Months since the last bankcard delinquency,safer,never delinquent on a bankcard,False,2012,mths_since_recent_bc_dlq
+mths_since_recent_revol_delinq,delinquency,Months since the last revolving delinquency,safer,never delinquent on revolving,False,2012,mths_since_recent_revol_delinq
+num_tl_90g_dpd_24m,delinquency,Trades 90+ DPD in the last 24 months,riskier,none,False,2012,num_tl_90g_dpd_24m
+num_tl_30dpd,delinquency,Trades currently 30 DPD,riskier,none,False,2012,num_tl_30dpd
+num_tl_120dpd_2m,delinquency,Trades 120+ DPD in the last 2 months,riskier,none,False,2012,num_tl_120dpd_2m
+acc_now_delinq,delinquency,Accounts currently delinquent,riskier,none,False,2012,acc_now_delinq
+pct_tl_nvr_dlq,delinquency,Percent of trades never delinquent,safer,no trades,False,2012,pct_tl_nvr_dlq
+pub_rec,derogatory,Derogatory public records,riskier,none,False,2012,pub_rec
+pub_rec_bankruptcies,derogatory,Public-record bankruptcies,riskier,none,False,2012,pub_rec_bankruptcies
+tax_liens,derogatory,Tax liens,riskier,none,False,2012,tax_liens
+mths_since_last_record,derogatory,Months since the last public record,safer,no public record,False,2012,mths_since_last_record
+collections_12_mths_ex_med,derogatory,Collections in 12 months excluding medical,riskier,none,False,2012,collections_12_mths_ex_med
+chargeoff_within_12_mths,derogatory,Charge-offs in the last 12 months,riskier,none,False,2012,chargeoff_within_12_mths
+tot_coll_amt,derogatory,Total collection amount ever owed,riskier,none,False,2012,tot_coll_amt
+open_acc,tradelines,Open credit lines,no prior,none,False,2012,open_acc
+total_acc,tradelines,Total credit lines ever,safer,none,False,2012,total_acc
+acc_open_past_24mths,tradelines,Trades opened in the last 24 months,riskier,none,False,2012,acc_open_past_24mths
+num_tl_op_past_12m,tradelines,Trades opened in the last 12 months,riskier,none,False,2012,num_tl_op_past_12m
+num_actv_bc_tl,tradelines,Active bankcard trades,no prior,none,False,2012,num_actv_bc_tl
+num_bc_sats,tradelines,Satisfactory bankcard accounts,safer,none,False,2012,num_bc_sats
+num_bc_tl,tradelines,Bankcard trades ever,safer,none,False,2012,num_bc_tl
+num_il_tl,tradelines,Installment trades ever,no prior,none,False,2012,num_il_tl
+num_rev_accts,tradelines,Revolving accounts ever,safer,none,False,2012,num_rev_accts
+num_rev_tl_bal_gt_0,tradelines,Revolving trades with a balance,riskier,none,False,2012,num_rev_tl_bal_gt_0
+num_sats,tradelines,Satisfactory accounts,safer,none,False,2012,num_sats
+mort_acc,tradelines,Mortgage accounts,safer,none,False,2012,mort_acc
+open_rv_24m,tradelines,Revolving trades opened in 24 months,riskier,field not reported,False,2016,open_rv_24m
+open_il_24m,tradelines,Installment trades opened in 24 months,riskier,field not reported,False,2016,open_il_24m
+revol_util,balances_utilisation,"Revolving utilisation, percent",riskier,no revolving limit,False,2012,revol_util
+bc_util,balances_utilisation,"Bankcard utilisation, percent",riskier,no bankcard limit,False,2012,bc_util
+all_util,balances_utilisation,"Utilisation across all trades, percent",riskier,field not reported,False,2016,all_util
+il_util,balances_utilisation,"Installment utilisation, percent",riskier,no installment limit / not reported,False,2016,il_util
+percent_bc_gt_75,balances_utilisation,Percent of bankcards above 75% utilised,riskier,no bankcards,False,2012,percent_bc_gt_75
+bc_open_to_buy,balances_utilisation,"Open-to-buy on bankcards, dollars",safer,no bankcards,False,2012,bc_open_to_buy
+revol_bal,balances_utilisation,"Revolving balance, dollars",no prior,none,False,2012,revol_bal
+total_bal_ex_mort,balances_utilisation,Total balance excluding mortgage,no prior,none,False,2012,total_bal_ex_mort
+tot_cur_bal,balances_utilisation,Total current balance,no prior,none,False,2012,tot_cur_bal
+avg_cur_bal,balances_utilisation,Average current balance per account,safer,no accounts,False,2012,avg_cur_bal
+max_bal_bc,balances_utilisation,Maximum bankcard balance,no prior,no bankcards,False,2012,max_bal_bc
+total_bc_limit,balances_utilisation,Total bankcard limit,safer,no bankcards,False,2012,total_bc_limit
+total_rev_hi_lim,balances_utilisation,Total revolving high credit / limit,safer,none,False,2012,total_rev_hi_lim
+tot_hi_cred_lim,balances_utilisation,Total high credit / limit,safer,none,False,2012,tot_hi_cred_lim
+mo_sin_old_rev_tl_op,credit_age,Months since the oldest revolving trade opened,safer,no revolving trade,False,2012,mo_sin_old_rev_tl_op
+mo_sin_old_il_acct,credit_age,Months since the oldest installment account opened,safer,no installment account,False,2012,mo_sin_old_il_acct
+mo_sin_rcnt_rev_tl_op,credit_age,Months since the most recent revolving trade opened,safer,no revolving trade,False,2012,mo_sin_rcnt_rev_tl_op
+mo_sin_rcnt_tl,credit_age,Months since the most recent trade opened,safer,no trades,False,2012,mo_sin_rcnt_tl
+mths_since_rcnt_il,credit_age,Months since the most recent installment account,safer,no installment account,False,2012,mths_since_rcnt_il
+credit_age_months,credit_age,Months from the earliest credit line to issue,safer,no credit line date,True,2012,"earliest_cr_line, issue_d"
+new_trades_share_24m,tradelines,Trades opened in 24 months as a share of all trades,riskier,no trades,True,2012,"acc_open_past_24mths, total_acc"
+revol_bal_to_limit,balances_utilisation,Revolving balance over revolving limit (own utilisation),riskier,no revolving limit,True,2012,"revol_bal, total_rev_hi_lim"
+bal_ex_mort_to_limit,balances_utilisation,Non-mortgage balance over total limit,riskier,no limit,True,2012,"total_bal_ex_mort, tot_hi_cred_lim"
+any_derog_flag,derogatory,"Any public record, lien, bankruptcy or 12-month collection",riskier,none,True,2012,"pub_rec, tax_liens, pub_rec_bankruptcies, collections_12_mths_ex_med, chargeoff_within_12_mths"
+ever_delinquent_flag,delinquency,Any delinquency ever recorded,riskier,none,True,2012,"mths_since_last_delinq, delinq_2yrs, num_tl_90g_dpd_24m"

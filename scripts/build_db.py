@@ -206,9 +206,9 @@ def build_accepted(con: duckdb.DuckDBPyConnection) -> None:
     step("Staging accepted (all VARCHAR)", con,
          f"CREATE TABLE stg_accepted AS {read_varchar(config.ACCEPTED_CSV)}")
     check_header(staging_columns(con, "stg_accepted"), ACCEPTED_COLUMNS, "accepted")
-    n_all = con.execute("SELECT COUNT(*) FROM stg_accepted").fetchone()[0]
+    n_all = con.execute("SELECT COUNT(*) FROM stg_accepted").fetchall()[0][0]
     n_bad = con.execute("SELECT COUNT(*) FROM stg_accepted "
-                        "WHERE TRY_CAST(id AS BIGINT) IS NULL").fetchone()[0]
+                        "WHERE TRY_CAST(id AS BIGINT) IS NULL").fetchall()[0][0]
     print(f"  staging rows {n_all:,}; dropping {n_bad:,} rows with non-numeric id")
     exprs = ",\n  ".join(accepted_expr(c) for c in ACCEPTED_COLUMNS)
     step("Casting accepted", con,
@@ -248,10 +248,10 @@ def print_counts(con: duckdb.DuckDBPyConnection) -> None:
     print("\nobject            kind    rows         columns")
     for name, kind in con.execute("SELECT table_name, table_type FROM information_schema.tables "
                                   "ORDER BY table_type, table_name").fetchall():
-        rows = con.execute(f"SELECT COUNT(*) FROM {q(name)}").fetchone()[0]
+        rows = con.execute(f"SELECT COUNT(*) FROM {q(name)}").fetchall()[0][0]
         cols = len(staging_columns(con, q(name)))
         print(f"{name:<17} {'table' if kind == 'BASE TABLE' else 'view':<7} {rows:>12,}  {cols:>6}")
-    lo, hi = con.execute("SELECT MIN(issue_d), MAX(issue_d) FROM accepted").fetchone()
+    lo, hi = con.execute("SELECT MIN(issue_d), MAX(issue_d) FROM accepted").fetchall()[0]
     print(f"\naccepted issue_d range: {lo} .. {hi}")
 
 

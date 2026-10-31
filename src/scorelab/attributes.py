@@ -187,7 +187,7 @@ def build_attributes(frame: pd.DataFrame, names: list[str] | None = None) -> pd.
     names = names or [a.name for a in REGISTRY]
     for f in PERCENT_FIELDS:
         if f in out:
-            out[f] = out[f].where(out[f] <= PERCENT_CAP, PERCENT_CAP)
+            out[f] = out[f].clip(upper=PERCENT_CAP)       # caps the tail; missing stays missing
     count_like = [a.name for a in REGISTRY if not a.derived and a.family in ("inquiries", "delinquency", "derogatory", "tradelines")]
     for c in count_like:
         if c in out:

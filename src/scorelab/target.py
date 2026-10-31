@@ -56,6 +56,7 @@ def target_view_sql(window: int | None = None, snapshot: str | None = None) -> s
     bad = _sql_list(config.BAD_STATUSES)
     dlq = _sql_list(config.DELINQUENT_STATUSES)
     policy = config.CREDIT_POLICY_PREFIX.replace("'", "''")
+    app_excl = _sql_list(config.EXCLUDED_APPLICATION_TYPES)
     return f"""
     WITH base AS (
         SELECT id,
@@ -66,7 +67,8 @@ def target_view_sql(window: int | None = None, snapshot: str | None = None) -> s
                loan_status,
                datediff('month', issue_d, last_pymnt_d)        AS months_to_last_payment,
                loan_status IN ({bad}) OR loan_status IN ({dlq}) AS is_delinquent,
-               CASE WHEN loan_status LIKE '{policy}%' THEN 'credit_policy' END AS exclusion,
+               CASE WHEN loan_status LIKE '{policy}%' THEN 'credit_policy'
+                    WHEN application_type IN ({app_excl}) THEN 'joint_application' END AS exclusion,
                CAST(issue_d + INTERVAL {w} MONTH  <= DATE '{snap}' AS INTEGER) AS observable,
                CAST(issue_d + INTERVAL {ew} MONTH <= DATE '{snap}' AS INTEGER) AS early_observable
         FROM accepted
@@ -206,6 +208,42 @@ def window_sensitivity(con: duckdb.DuckDBPyConnection,
         """).df()
         rows.append(df)
     return pd.concat(rows, ignore_index=True)
+
+
+def exclusion_waterfall(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    """From all accepted loans to the labelled modelling sample, one step per filter.
+
+    Rows are the steps (all accepted, modelling vintages, credit-policy exclusion, joint-application
+    exclusion, 24-month observability, indeterminates removed); columns are the loans remaining per
+    modelling split and in total, the loans removed by that step (total), and the bads remaining (total)."""
+    sp = _sql_list(MODEL_SPLITS)
+    total = con.execute("SELECT COUNT(*) FROM v_split").fetchall()[0][0]
+    df = con.sql(f"""
+        SELECT split,
+               COUNT(*)                                                             AS modelling_vintages,
+               SUM(CASE WHEN exclusion IS DISTINCT FROM 'credit_policy' THEN 1 ELSE 0 END)
+                                                                                    AS after_credit_policy,
+               SUM(CASE WHEN exclusion IS NULL THEN 1 ELSE 0 END)                    AS after_joint_application,
+               SUM(CASE WHEN exclusion IS NULL AND observable = 1 THEN 1 ELSE 0 END) AS observable_24m,
+               SUM(CASE WHEN exclusion IS NULL AND observable = 1 AND label IN ('bad', 'good') THEN 1 ELSE 0 END)
+                                                                                    AS labelled_sample,
+               SUM(CASE WHEN exclusion IS NULL AND observable = 1 AND label = 'bad' THEN 1 ELSE 0 END) AS bads
+        FROM v_split WHERE split IN ({sp}) GROUP BY split
+    """).df().set_index("split").reindex(list(MODEL_SPLITS))
+    steps = ["modelling_vintages", "after_credit_policy", "after_joint_application", "observable_24m", "labelled_sample"]
+    labels = {"modelling_vintages": "issued in the modelling vintages",
+              "after_credit_policy": "minus 'does not meet the credit policy' loans",
+              "after_joint_application": "minus joint applications",
+              "observable_24m": "minus loans whose 24-month window is not closed",
+              "labelled_sample": "minus indeterminates (labelled sample)"}
+    out = pd.DataFrame({s: df[steps].T[s] for s in MODEL_SPLITS}).astype("Int64")
+    out["total"] = out.sum(axis=1).astype("Int64")
+    out.index = [labels[s] for s in steps]
+    out.loc["all accepted loans"] = [pd.NA] * len(MODEL_SPLITS) + [total]
+    out = out.loc[["all accepted loans"] + [labels[s] for s in steps]]
+    out["removed"] = (-out["total"].diff()).astype("Int64")
+    out["bads_remaining"] = pd.Series({labels["labelled_sample"]: int(df["bads"].sum())}).reindex(out.index).astype("Int64")
+    return out
 
 
 def indeterminate_profile(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:

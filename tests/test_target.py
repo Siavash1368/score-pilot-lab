@@ -36,7 +36,9 @@ CASES = [
     (10, ISSUE_LATE, " 36 months", "Charged Off", 5, 680, 684),    # unobservable at 24; 60+ at month 8 -> early_bad
     (11, ISSUE_LATE, " 36 months", "Current", 13, 680, 684),       # unobservable; early good
     (12, ISSUE_OBS, " 36 months", "Does not meet the credit policy. Status:Charged Off", 3, 660, 664),
+    (13, ISSUE_OBS, " 36 months", "Fully Paid", 36, 720, 724),      # joint application -> excluded
 ]
+JOINT_IDS = {13}
 
 
 @pytest.fixture(scope="module")
@@ -45,14 +47,14 @@ def con():
     c.execute("""
         CREATE TABLE accepted (
             id BIGINT, issue_d DATE, term VARCHAR, loan_status VARCHAR, last_pymnt_d DATE,
-            fico_range_low DOUBLE, fico_range_high DOUBLE, revol_util DOUBLE
+            fico_range_low DOUBLE, fico_range_high DOUBLE, revol_util DOUBLE, application_type VARCHAR
         )
     """)
     rows = []
     for i, issue, term, status, m_last, lo, hi in CASES:
         last = _add_months(issue, m_last) if m_last is not None else None
-        rows.append((i, issue, term, status, last, lo, hi, 50.0))
-    c.executemany("INSERT INTO accepted VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        rows.append((i, issue, term, status, last, lo, hi, 50.0, "Joint App" if i in JOINT_IDS else "Individual"))
+    c.executemany("INSERT INTO accepted VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
     c.execute("CREATE VIEW v_accepted_asof AS SELECT id, issue_d, loan_status, fico_range_low, "
               "fico_range_high, revol_util FROM accepted")
     target.create_views(c)
@@ -102,6 +104,7 @@ def test_unobservable_rows_have_null_label_but_early_indicator(con):
 def test_credit_policy_rows_are_flagged(con):
     lab = labels(con)
     assert lab[12]["exclusion"] == "credit_policy"
+    assert lab[13]["exclusion"] == "joint_application"
     assert all(pd.isna(lab[i]["exclusion"]) for i in range(1, 12))
 
 
@@ -160,3 +163,17 @@ def test_sample_predicate_is_deterministic_nested_and_seeded():
     assert target.sample_predicate(None) == ""
     with pytest.raises(ValueError):
         target.sample_predicate(1.5)
+
+
+def test_exclusion_waterfall_counts_each_step():
+    con = duckdb.connect()
+    con.execute("""CREATE TABLE v_split AS SELECT * FROM (VALUES
+        ('train', NULL, 1, 'bad'), ('train', NULL, 1, 'good'), ('train', NULL, 1, 'indeterminate'),
+        ('train', 'credit_policy', 1, 'good'), ('validate', NULL, 1, 'good'), ('oot', NULL, 1, 'bad'),
+        ('oot', 'joint_application', 1, 'good'),
+        ('monitor', NULL, 0, NULL), (NULL, NULL, 1, 'good')) t(split, exclusion, observable, label)""")
+    w = target.exclusion_waterfall(con)
+    assert list(w["total"]) == [9, 7, 6, 5, 5, 4]
+    assert list(w["removed"].iloc[1:]) == [2, 1, 1, 0, 1]
+    assert w.loc["minus indeterminates (labelled sample)", "train"] == 2
+    assert w["bads_remaining"].iloc[-1] == 2 and w["bads_remaining"].iloc[:-1].isna().all()

@@ -99,3 +99,27 @@ Source: Kaggle `wordsforthewise/lending-club`.
   Two consecutive NB07b runs now give byte-identical tuned models and identical comparison tables.
 - **Consequence.** The 5% smoke sample changed with this fix, so smoke numbers from before 2026-10-30 evening
   are not comparable with later ones.
+
+## 2026-10-31 — Scope, structural fields and exclusions (NB01, NB02; decided by Siavash)
+
+- **Training vintages 2013–2014** (`config.TRAIN_VINTAGES`). A block of 21 bureau fields is 100% missing for
+  loans issued January–July 2012 and 83% missing in August 2012, against 0% from 2013. Keeping 2012 would
+  turn the missing bin into a marker of issue date. Cost: 53,367 loans dropped from training. Starting in
+  September 2012 was considered and not taken, because it would need a month-level start date.
+- **Structural fields for NB03:** the 2016-only block (`all_util`, `il_util`, `inq_last_12m`, `max_bal_bc`,
+  `mths_since_rcnt_il`, `open_il_24m`, `open_rv_24m`). `mths_since_last_record` stays a candidate: it is 81–88%
+  missing in every year from 2013, so missing means "no public record", not a reporting gap.
+- **Joint applications excluded** from every split (`config.EXCLUDED_APPLICATION_TYPES`, exclusion
+  `joint_application`). There are none in train, 511 in validate and 8,789 in 2016, and the joint-application
+  fields are out of scope for v1.
+- **60-month loans kept,** and reported as a segment. **24-month window kept.** **Indeterminates excluded** from
+  fitting, with NB08 to show the sensitivity with them counted as bad. **Full data**, with no prior correction.
+
+## 2026-10-31 — Fix: missing utilisation was coded as 150%
+
+`attributes.build_attributes` capped the percent fields with `where(x <= 150, 150)`, which also replaced
+missing values with 150%, the riskiest value. Applicants with no bankcard (about 1% of train) were binned as
+maxed-out on `bc_util` and `percent_bc_gt_75`, and `all_util` and `il_util` looked complete where they are
+absent. The cap is now `clip(upper=150)`, which leaves missing values missing, and
+`tests/test_attributes.py` covers it. This affected every earlier run, including the 5% smoke test. NB03–NB05
+were re-run on full data after the fix.

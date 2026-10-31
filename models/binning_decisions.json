@@ -1,0 +1,32 @@
+{
+ "binned_attributes": [
+  "new_trades_share_24m",
+  "acc_open_past_24mths",
+  "num_tl_op_past_12m",
+  "bal_ex_mort_to_limit",
+  "bc_open_to_buy",
+  "tot_hi_cred_lim",
+  "mo_sin_rcnt_tl",
+  "avg_cur_bal",
+  "mths_since_recent_inq",
+  "total_bc_limit",
+  "tot_cur_bal",
+  "inq_last_6mths",
+  "mo_sin_old_rev_tl_op",
+  "mo_sin_rcnt_rev_tl_op",
+  "total_rev_hi_lim",
+  "mort_acc",
+  "credit_age_months",
+  "percent_bc_gt_75",
+  "bc_util"
+ ],
+ "params": {
+  "max_bins": 8,
+  "prebins": 20,
+  "min_bin_share": 0.05,
+  "min_bads": 50
+ },
+ "overrides": {},
+ "min_iv": 0.02,
+ "dropped_unstable": []
+}

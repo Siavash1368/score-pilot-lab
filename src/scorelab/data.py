@@ -60,7 +60,7 @@ def row_counts(con: duckdb.DuckDBPyConnection | None = None) -> pd.DataFrame:
         rows = []
         for name, kind in con.execute("SELECT table_name, table_type FROM information_schema.tables ORDER BY 2, 1").fetchall():
             rows.append({"object": name, "kind": "table" if kind == "BASE TABLE" else "view",
-                         "rows": con.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]})
+                         "rows": con.execute(f"SELECT COUNT(*) FROM {name}").fetchall()[0][0]})
         return pd.DataFrame(rows)
     finally:
         if own: con.close()
@@ -93,7 +93,7 @@ def numeric_profile(columns: list[str], con: duckdb.DuckDBPyConnection | None = 
         for c in columns:
             r = con.execute(f"""SELECT COUNT({c}), AVG(CASE WHEN {c} IS NULL THEN 1 ELSE 0 END), MIN({c}),
                                quantile_cont({c}, 0.01), median({c}), quantile_cont({c}, 0.99), MAX({c})
-                               FROM {source} {where}""").fetchone()
+                               FROM {source} {where}""").fetchall()[0]
             rows.append({"column": c, "n_nonmissing": r[0], "missing_share": round(r[1], 4), "min": r[2], "p1": r[3],
                          "median": r[4], "p99": r[5], "max": r[6]})
         return pd.DataFrame(rows)

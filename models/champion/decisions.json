@@ -1,0 +1,20 @@
+{
+ "attributes": [
+  "new_trades_share_24m",
+  "num_tl_op_past_12m",
+  "bal_ex_mort_to_limit",
+  "bc_open_to_buy",
+  "tot_hi_cred_lim",
+  "mths_since_recent_inq",
+  "mo_sin_old_rev_tl_op",
+  "percent_bc_gt_75"
+ ],
+ "selection": {
+  "p_enter": 0.01,
+  "max_corr": 0.7,
+  "max_attributes": 15
+ },
+ "force_in": [],
+ "force_out": [],
+ "penalty": null
+}

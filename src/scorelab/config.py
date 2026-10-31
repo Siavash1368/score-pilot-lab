@@ -52,7 +52,9 @@ SCORE_MAX = 850
 
 # --- Sample design -----------------------------------------------------------
 DATA_CUT = "2018-12-31"  # last month of the 2018Q4 data cut
-TRAIN_VINTAGES = (2012, 2013, 2014)
+# 2012 is out: a block of 21 bureau fields is unreported for January–August 2012 (NB01, decided
+# 2026-10-31, see docs/decisions.md).
+TRAIN_VINTAGES = (2013, 2014)
 VALIDATE_VINTAGE = 2015
 OOT_VINTAGE = 2016
 # Inclusive range; outcomes partially censored. Starts after the full-year 2016 OOT vintage so
@@ -84,6 +86,9 @@ MONTHS_FIRST_MISS_TO_90DPD = 3
 # Early-performance indicator for the censored monitor vintages (NB09): 60+ DPD within 12 months.
 EARLY_WINDOW_MONTHS = 12
 CREDIT_POLICY_PREFIX = "Does not meet the credit policy. Status:"
+# Application types excluded from every split: joint applications first appear in the validation
+# year (none in train), and the joint-application fields are out of scope for v1 (NB02, 2026-10-31).
+EXCLUDED_APPLICATION_TYPES = ("Joint App",)
 
 # --- Incumbent score -----------------------------------------------------------
 # The pilot benchmarks the scorecard against the lender's current score: the FICO range at

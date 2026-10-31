@@ -29,7 +29,7 @@ def main() -> None:
     try:
         target.create_views(con)
         for name in ("v_target", "v_split"):
-            n = con.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+            n = con.execute(f"SELECT COUNT(*) FROM {name}").fetchall()[0][0]
             cols = len(con.execute(f"DESCRIBE {name}").fetchall())
             print(f"{name:<9} rows {n:>12,}  columns {cols:>3}")
         print(con.sql("""

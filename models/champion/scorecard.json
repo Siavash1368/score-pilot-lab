@@ -1,0 +1,51 @@
+{
+ "attributes": [
+  "new_trades_share_24m",
+  "num_tl_op_past_12m",
+  "bal_ex_mort_to_limit",
+  "bc_open_to_buy",
+  "tot_hi_cred_lim",
+  "mths_since_recent_inq",
+  "mo_sin_old_rev_tl_op",
+  "percent_bc_gt_75"
+ ],
+ "intercept": -2.2440966859240263,
+ "coef": {
+  "new_trades_share_24m": -0.5224878516937751,
+  "num_tl_op_past_12m": -0.6366600062734564,
+  "bal_ex_mort_to_limit": -0.42449553018543146,
+  "bc_open_to_buy": -0.40527195758217893,
+  "tot_hi_cred_lim": -0.5749427342968286,
+  "mths_since_recent_inq": -0.7883696556635067,
+  "mo_sin_old_rev_tl_op": -0.3770099830285744,
+  "percent_bc_gt_75": -0.8822341026050077
+ },
+ "std_err": {
+  "new_trades_share_24m": 0.02222899836195117,
+  "num_tl_op_past_12m": 0.02714080884918094,
+  "bal_ex_mort_to_limit": 0.0312972138259303,
+  "bc_open_to_buy": 0.03318421537970284,
+  "tot_hi_cred_lim": 0.03456830777178964,
+  "mths_since_recent_inq": 0.028191514640152307,
+  "mo_sin_old_rev_tl_op": 0.031470203988343534,
+  "percent_bc_gt_75": 0.04410865393449551
+ },
+ "p_values": {
+  "new_trades_share_24m": 3.6440628581786645e-122,
+  "num_tl_op_past_12m": 1.10403425107635e-121,
+  "bal_ex_mort_to_limit": 6.603588088199378e-42,
+  "bc_open_to_buy": 2.6561137447471256e-34,
+  "tot_hi_cred_lim": 4.081997524214877e-62,
+  "mths_since_recent_inq": 4.3580034658103786e-172,
+  "mo_sin_old_rev_tl_op": 4.5285465163438026e-33,
+  "percent_bc_gt_75": 5.356578775740198e-89
+ },
+ "base_score": 600,
+ "base_odds": 30.0,
+ "pdo": 40,
+ "n_train": 364774,
+ "bad_rate_train": 0.09596352810233186,
+ "deviance": 223024.75180820626,
+ "null_deviance": 230626.40310008137,
+ "penalty": null
+}
