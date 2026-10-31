@@ -68,3 +68,17 @@ def test_iv_summary_strength_labels(synth):
     out = B.iv_summary(specs)
     assert set(out.attribute) == {"util", "age", "inq"} and out.iv.is_monotonic_decreasing
     assert set(out.strength) <= {"useless", "weak", "medium", "strong", "suspicious"}
+
+
+def test_forced_missing_bin_below_the_floors(synth):
+    tr = synth[synth.split == "train"].copy()
+    tr.loc[tr.index[:60], "util"] = float("nan")                  # 0.5% missing: below the 5%/2 share floor
+    default = B.fit_numeric(tr["util"], tr["bad"], direction=1)
+    forced = B.fit_numeric(tr["util"], tr["bad"], direction=1, force_missing_bin=True)
+    assert not default.missing_own_bin and default.labels[default.missing_bin].endswith("+ Missing")
+    assert forced.missing_own_bin and forced.labels[-1] == B.MISSING_LABEL and forced.n[-1] == 60
+    assert np.isfinite(forced.woe[-1])                              # smoothed, finite even when small
+    specs = B.fit_all(tr, ["util", "age"], directions={"util": 1, "age": -1}, missing_own_bin=["util"])
+    assert specs["util"].missing_own_bin
+    prof = B.missing_profile(tr, ["util"])
+    assert prof.query("missing").n.sum() == 60 and prof.n.sum() == len(tr)

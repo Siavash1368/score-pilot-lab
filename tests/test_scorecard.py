@@ -67,3 +67,20 @@ def test_save_load_roundtrip(fitted, tmp_path):
     c2, s2 = S.load_card(tmp_path / "card")
     assert c2.attributes == card.attributes and c2.intercept == pytest.approx(card.intercept)
     assert (S.score(tr.head(50), c2, s2)["score"].values == S.score(tr.head(50), card, specs)["score"].values).all()
+
+
+def test_missing_reason_replaces_attribute_reason_and_is_counted_once(fitted):
+    tr, specs, W, card = fitted
+    # Make "age" missing for every row in the age missing bin, then map it, and util, to one text.
+    rows = tr.head(400).copy()
+    miss_rows = rows["age"].isna()
+    assert miss_rows.any()
+    plain = S.reason_codes(rows, card, specs)
+    mapped = S.reason_codes(rows, card, specs, missing_reasons={"age": "No age on file"})
+    cols = [f"reason_{i + 1}" for i in range(4)]
+    texts = mapped.loc[miss_rows, cols].to_numpy().ravel()
+    assert not any(str(t).startswith("age [") for t in texts)        # never the attribute's own reason when missing
+    gave_age_reason = plain.loc[miss_rows, cols].apply(lambda r: any(str(t).startswith("age [") for t in r), axis=1)
+    assert (mapped.loc[miss_rows & gave_age_reason, cols].apply(lambda r: "No age on file" in set(r), axis=1)).all()
+    both = S.reason_codes(rows, card, specs, missing_reasons={"age": "Shared", "util": "Shared"})
+    assert (both[cols].apply(lambda r: list(r).count("Shared"), axis=1) <= 1).all()   # one code, not two

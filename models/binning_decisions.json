@@ -28,5 +28,10 @@
  },
  "overrides": {},
  "min_iv": 0.02,
- "dropped_unstable": []
+ "dropped_unstable": [],
+ "missing_own_bin": [
+  "bc_open_to_buy",
+  "percent_bc_gt_75",
+  "bc_util"
+ ]
 }

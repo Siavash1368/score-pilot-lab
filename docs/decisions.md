@@ -123,3 +123,21 @@ maxed-out on `bc_util` and `percent_bc_gt_75`, and `all_util` and `il_util` look
 absent. The cap is now `clip(upper=150)`, which leaves missing values missing, and
 `tests/test_attributes.py` covers it. This affected every earlier run, including the 5% smoke test. NB03–NB05
 were re-run on full data after the fix.
+
+## 2026-10-31 — No active bankcard: own bin and own reason code (NB04, NB05)
+
+- **Definition.** "No active bankcard" means a total bankcard limit of 0 (or missing). `build_attributes` then sets
+  `bc_open_to_buy`, `percent_bc_gt_75` and `bc_util` to missing. Lending Club had recorded
+  `bc_open_to_buy = 0` instead of missing for 114 such loans in train, 273 in validate and 29 in 2016.
+- **Size and risk.** 3,505 train loans (396 bads, 11.30% bad, against 9.58% for everyone else); 4,166 in validate
+  (13.03%); 4,470 in 2016 (12.42%).
+- **Own bin.** `bc_open_to_buy`, `percent_bc_gt_75` and `bc_util` always get a separate missing bin
+  (`binning.fit_numeric(force_missing_bin=True)`). Before, the 5% share floor merged this group into the low
+  open-to-buy and >75% bins. The 396 bads make the bin reliable, and standard WOE smoothing applies.
+- **Reason code.** A missing value in `bc_open_to_buy` or `percent_bc_gt_75` gives "No active bankcard on file",
+  never a utilisation reason, and both together count as one reason with their points lost added together
+  (`attributes.MISSING_REASONS`, `scorecard.reason_codes`). On 2016, all 4,470 such applicants get it exactly
+  once and none gets a bankcard-utilisation reason. `bc_util` is not mapped, because it is also missing for 225
+  train applicants who have a bankcard limit.
+- **Effect on the card.** None of substance: the same 8 attributes, coefficients within 0.0001, OOT Gini
+  0.2838 unchanged.

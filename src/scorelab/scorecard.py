@@ -179,26 +179,35 @@ def score(df: pd.DataFrame, card: Scorecard, specs: dict[str, BinSpec], clip: bo
 
 
 def reason_codes(df: pd.DataFrame, card: Scorecard, specs: dict[str, BinSpec], n_codes: int = config.N_REASON_CODES,
-                 meanings: dict[str, str] | None = None) -> pd.DataFrame:
-    """Top ``n_codes`` attributes per row by points lost against that attribute's best bin
-    (the max-points method; exact for an additive card). ``meanings`` maps attribute -> plain words."""
+                 meanings: dict[str, str] | None = None, missing_reasons: dict[str, str] | None = None) -> pd.DataFrame:
+    """Top ``n_codes`` reasons per row by points lost against each attribute's best bin
+    (the max-points method; exact for an additive card). ``meanings`` maps attribute -> plain words.
+
+    ``missing_reasons`` maps attribute -> the reason to give when that attribute is *missing* for the
+    applicant (e.g. "No active bankcard on file" instead of a utilisation reason). Attributes that map to
+    the same text count as one reason, with their points lost added together."""
     pts = points_table(card, specs)
     lookup = {(r.attribute, r.bin): (r.points_lost_vs_best, r.label) for r in pts.itertuples()}
     out = {f"reason_{i + 1}": [] for i in range(n_codes)}
     out.update({f"reason_{i + 1}_points_lost": [] for i in range(n_codes)})
     idx = {a: bin_index(df[a], specs[a]) for a in card.attributes}
+    miss = {a: df[a].isna().to_numpy() for a in card.attributes if a in (missing_reasons or {})}
     for r in range(len(df)):
-        losses = []
+        by_text: dict[str, list] = {}
         for a in card.attributes:
             lost, label = lookup[(a, int(idx[a][r]))]
-            if lost > 0:
-                losses.append((lost, a, label))
-        losses.sort(reverse=True)
+            if lost <= 0:
+                continue
+            if a in miss and miss[a][r]:
+                text = missing_reasons[a]
+            else:
+                text = f"{(meanings or {}).get(a, a)} [{label}]"
+            by_text.setdefault(text, [0.0])[0] += lost
+        losses = sorted(((v[0], t) for t, v in by_text.items()), reverse=True)
         for i in range(n_codes):
             if i < len(losses):
-                lost, a, label = losses[i]
-                text = (meanings or {}).get(a, a)
-                out[f"reason_{i + 1}"].append(f"{text} [{label}]")
+                lost, text = losses[i]
+                out[f"reason_{i + 1}"].append(text)
                 out[f"reason_{i + 1}_points_lost"].append(round(lost, 1))
             else:
                 out[f"reason_{i + 1}"].append(""); out[f"reason_{i + 1}_points_lost"].append(0.0)

@@ -133,10 +133,15 @@ def _numeric_counts(x: np.ndarray, y: np.ndarray, edges: list[float]):
 
 
 def fit_numeric(x: pd.Series, y: pd.Series, name: str | None = None, max_bins: int = 8, prebins: int = 20,
-                min_bin_share: float = 0.05, min_bads: int = 50, direction: int | str = "auto") -> BinSpec:
+                min_bin_share: float = 0.05, min_bads: int = 50, direction: int | str = "auto",
+                force_missing_bin: bool = False) -> BinSpec:
     """Monotone coarse classes for a numeric attribute. ``direction``: +1, -1, 0 (none) or 'auto'
     (try both and keep the higher IV; ties go to the sign of the raw correlation). ``max_bins`` counts
-    non-missing bins; a missing bin, when it earns one, is added on top."""
+    non-missing bins; a missing bin, when it earns one, is added on top.
+
+    ``force_missing_bin`` gives missing values their own bin whenever any are present, even below the
+    share and bad-count floors (the WOE is still smoothed by ``SMOOTH``). Use it when missing has its own
+    meaning that must not share a bin, or a reason code, with real values (e.g. no active bankcard)."""
     name = name or x.name
     xv = x.to_numpy(dtype=float); yv = y.to_numpy(dtype=float)
     miss = np.isnan(xv)
@@ -184,7 +189,7 @@ def fit_numeric(x: pd.Series, y: pd.Series, name: str | None = None, max_bins: i
     missing_bin, own = None, False
     n_miss = int(miss.sum()); nb_miss = int(yv[miss].sum())
     if n_miss > 0:
-        if nb_miss >= min_bads and n_miss >= min_n // 2:
+        if force_missing_bin or (nb_miss >= min_bads and n_miss >= min_n // 2):
             n.append(n_miss); nb.append(nb_miss); labels.append(MISSING_LABEL)
             woe_all, iv = _woe_iv(np.array(n), np.array(nb)); woe = list(woe_all)
             missing_bin, own = len(n) - 1, True
@@ -307,9 +312,10 @@ def transform_woe(df: pd.DataFrame, specs: dict[str, BinSpec], suffix: str = "_w
 
 
 def fit_all(df: pd.DataFrame, names: list[str], target: str = "bad", directions: dict[str, int] | None = None,
-            categorical: list[str] | None = None, **kw) -> dict[str, BinSpec]:
+            categorical: list[str] | None = None, missing_own_bin: list[str] | None = None, **kw) -> dict[str, BinSpec]:
     """Fit a spec per attribute. ``directions`` (from the registry) fixes the monotone direction where
-    given; others use 'auto'. ``categorical`` names use the categorical fitter."""
+    given; others use 'auto'. ``categorical`` names use the categorical fitter. Numeric names in
+    ``missing_own_bin`` always get a separate missing bin (see :func:`fit_numeric`)."""
     y = df[target].astype(float)
     specs = {}
     for n in names:
@@ -317,8 +323,23 @@ def fit_all(df: pd.DataFrame, names: list[str], target: str = "bad", directions:
             specs[n] = fit_categorical(df[n], y, name=n, **{k: v for k, v in kw.items() if k in ("max_bins", "min_bin_share", "min_bads")})
         else:
             d = (directions or {}).get(n, "auto")
-            specs[n] = fit_numeric(df[n], y, name=n, direction=d if d != 0 else "auto", **kw)
+            specs[n] = fit_numeric(df[n], y, name=n, direction=d if d != 0 else "auto",
+                                   force_missing_bin=n in (missing_own_bin or []), **kw)
     return specs
+
+
+def missing_profile(df: pd.DataFrame, names: list[str], target: str = "bad", by: str = "split") -> pd.DataFrame:
+    """Count, bads and bad rate of the missing group of each attribute against everyone else, per ``by``."""
+    rows = []
+    for n in names:
+        miss = df[n].isna()
+        for g, d in df.groupby(by, observed=True):
+            m = miss.loc[d.index]
+            for flag, part in ((True, d[m]), (False, d[~m])):
+                rows.append({"attribute": n, by: g, "missing": flag, "n": int(len(part)),
+                             "bads": int(part[target].sum()),
+                             "bad_rate": round(float(part[target].mean()), 4) if len(part) else np.nan})
+    return pd.DataFrame(rows)
 
 
 def iv_summary(specs: dict[str, BinSpec]) -> pd.DataFrame:

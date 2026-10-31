@@ -3,7 +3,7 @@ new_trades_share_24m,tradelines,0.0,959,0.5936,0.1873,riskier,riskier
 acc_open_past_24mths,tradelines,0.0,37,0.5809,0.1619,riskier,riskier
 num_tl_op_past_12m,tradelines,0.0,23,0.5728,0.1457,riskier,riskier
 bal_ex_mort_to_limit,balances_utilisation,0.0,363469,0.5658,0.1315,riskier,riskier
-bc_open_to_buy,balances_utilisation,0.0093,45201,0.4356,0.1287,safer,safer
+bc_open_to_buy,balances_utilisation,0.0096,45201,0.4356,0.1289,safer,safer
 mo_sin_rcnt_tl,credit_age,0.0,140,0.4383,0.1234,safer,safer
 tot_hi_cred_lim,balances_utilisation,0.0,214763,0.4402,0.1197,safer,safer
 total_bc_limit,balances_utilisation,0.0,9370,0.4417,0.1166,safer,safer
@@ -17,7 +17,7 @@ mort_acc,tradelines,0.0,36,0.4512,0.0976,safer,safer
 total_rev_hi_lim,balances_utilisation,0.0,12880,0.4521,0.0959,safer,safer
 credit_age_months,credit_age,0.0,657,0.4526,0.0949,safer,safer
 percent_bc_gt_75,balances_utilisation,0.0096,179,0.5457,0.0914,riskier,riskier
-bc_util,balances_utilisation,0.0099,1270,0.543,0.086,riskier,riskier
+bc_util,balances_utilisation,0.0102,1270,0.543,0.086,riskier,riskier
 mo_sin_old_il_acct,credit_age,0.0326,461,0.4664,0.0672,safer,safer
 revol_util,balances_utilisation,0.0006,1164,0.5313,0.0626,riskier,riskier
 revol_bal_to_limit,balances_utilisation,0.0004,317487,0.5307,0.0615,riskier,riskier

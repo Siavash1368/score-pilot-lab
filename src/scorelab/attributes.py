@@ -130,6 +130,17 @@ REGISTRY: list[Attribute] = [
 REGISTRY_BY_NAME = {a.name: a for a in REGISTRY}
 PERCENT_FIELDS = ("revol_util", "bc_util", "all_util", "il_util", "percent_bc_gt_75", "pct_tl_nvr_dlq")
 PERCENT_CAP = 150.0     # utilisation above this is a reporting artefact (max in data ~900%)
+# Adverse-action text when an attribute is missing for a reason of its own. A missing bankcard
+# open-to-buy or bankcard-utilisation share means no active bankcard (NB04, 2026-10-31): the
+# applicant must hear that, not a utilisation reason. Both map to one reason code.
+MISSING_REASONS = {"bc_open_to_buy": "No active bankcard on file",
+                   "percent_bc_gt_75": "No active bankcard on file"}
+# bc_util is not mapped: it is also missing for a few hundred applicants who do have a bankcard limit,
+# so "no active bankcard" would be untrue for them. It is not on the card.
+# "No active bankcard" is defined by a zero (or missing) total bankcard limit. For those applicants the
+# bankcard fields describe nothing, so build_attributes sets them to missing even where Lending Club
+# recorded a 0 (about 1 in 30 of them had bc_open_to_buy = 0 instead of missing).
+NO_BANKCARD_FIELDS = ("bc_open_to_buy", "percent_bc_gt_75", "bc_util")
 
 
 def registry_table() -> pd.DataFrame:
@@ -188,6 +199,11 @@ def build_attributes(frame: pd.DataFrame, names: list[str] | None = None) -> pd.
     for f in PERCENT_FIELDS:
         if f in out:
             out[f] = out[f].clip(upper=PERCENT_CAP)       # caps the tail; missing stays missing
+    if "total_bc_limit" in out:
+        no_bankcard = out["total_bc_limit"].fillna(0) <= 0
+        for f in NO_BANKCARD_FIELDS:
+            if f in out:
+                out.loc[no_bankcard, f] = np.nan
     count_like = [a.name for a in REGISTRY if not a.derived and a.family in ("inquiries", "delinquency", "derogatory", "tradelines")]
     for c in count_like:
         if c in out:
@@ -230,6 +246,24 @@ def availability_by_vintage(frame: pd.DataFrame, names: list[str], vintage_col: 
     """Share populated (non-missing) per attribute and vintage: finds fields that only exist late."""
     g = frame.groupby(vintage_col)[names].apply(lambda d: d.notna().mean())
     return g.T.round(3)
+
+
+def bucket_table(df: pd.DataFrame, name: str, edges: list[float], target: str = "bad") -> pd.DataFrame:
+    """Count, share, bads and bad rate of ``target`` by bucket of ``name``, missing as its own row.
+
+    ``edges`` are inclusive upper bounds of the finite buckets; values above the last edge form the
+    final bucket. A plain readout for checking that an attribute is built and signed as expected."""
+    x = df[name].astype(float)
+    bounds = [-np.inf] + list(edges) + [np.inf]
+    labels = []
+    for lo, hi in zip(bounds[:-1], bounds[1:]):
+        labels.append(f"<= {hi:g}" if lo == -np.inf else f"> {lo:g}" if hi == np.inf else f"({lo:g}, {hi:g}]")
+    b = pd.cut(x, bounds, labels=labels).astype(object).where(x.notna(), "Missing")
+    g = df.groupby(b, sort=False)[target].agg(n="size", bads="sum")
+    g = g.reindex([l for l in labels + ["Missing"] if l in g.index])
+    g["share"] = (g.n / g.n.sum()).round(4)
+    g["bad_rate"] = (g.bads / g.n).round(4)
+    return g.rename_axis(name).reset_index()
 
 
 def univariate_screen(frame: pd.DataFrame, names: list[str], target: str = "bad") -> pd.DataFrame:
