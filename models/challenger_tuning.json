@@ -39,15 +39,15 @@
   "Random forest (monotone)": "raw, 27 NB03 candidates (missing native)",
   "EBM (monotone, main effects)": "raw, 27 NB03 candidates (missing native)",
   "EBM (10 pairs, unconstrained)": "raw, 27 NB03 candidates (missing native)",
-  "MLP (raw, 27 candidates)": "raw, 27 NB03 candidates, standardised, median-imputed + missing flags (fit on 2012-14)",
+  "MLP (raw, 27 candidates)": "raw, 27 NB03 candidates, standardised, median-imputed + missing flags (fit on 2013-14)",
   "MLP (WOE, 19 binned)": "WOE, 19 NB04 binned attributes",
   "Stacked ensemble": "log-odds of: XGBoost (tuned, monotone), Random forest (monotone), EBM (monotone, main effects), MLP (raw, 27 candidates)"
  },
  "stack_weights": {
-  "XGBoost (tuned, monotone)": 0.6460235006381088,
-  "Random forest (monotone)": -0.11838464116176213,
-  "EBM (monotone, main effects)": -0.1462860919841961,
-  "MLP (raw, 27 candidates)": 0.5486494764521953
+  "XGBoost (tuned, monotone)": 0.6460235006379846,
+  "Random forest (monotone)": -0.11838464116164117,
+  "EBM (monotone, main effects)": -0.14628609198415413,
+  "MLP (raw, 27 candidates)": 0.5486494764521159
  },
  "recalibration_2015": {
   "a": 0.13225606069616608,
@@ -58,7 +58,7 @@
  },
  "n_trials": {
   "xgb": 23,
-  "xgb_budget": 30,
+  "xgb_budget": 23,
   "mlp_budget": 12
  },
  "ranking_2015": [

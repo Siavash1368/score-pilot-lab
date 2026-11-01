@@ -13,7 +13,7 @@ Gini lift challenger - incumbent: **0.1033** (DeLong z = 35.65, p = 0; bootstrap
 
 *Note on the incumbent: Lending Club used FICO in its approval, so FICO's range is truncated in this booked population (no loan below a FICO midpoint of 662 in these vintages). Its Gini here understates what FICO does on a full applicant population, and every comparison with FICO in this report measures lift over a truncated incumbent.*
 
-
+DRAFT (Claude, 2026-11-01, for review): On the 2016 out-of-time vintage the card's Gini is 0.2838 against 0.1805 for the FICO midpoint, a lift of 0.1033 (bootstrap 95% CI 0.0978 to 0.1091). FICO is truncated in this population because Lending Club used it to approve, so this is lift over a truncated incumbent, not over FICO on a full applicant population.
 
 ## 2. Gains tables
 
@@ -49,9 +49,11 @@ Incumbent:
 
 *Note on the incumbent: Lending Club used FICO in its approval, so FICO's range is truncated in this booked population (no loan below a FICO midpoint of 662 in these vintages). Its Gini here understates what FICO does on a full applicant population, and every comparison with FICO in this report measures lift over a truncated incumbent.*
 
-
+DRAFT (Claude, 2026-11-01, for review): The card's riskiest decile has a bad rate of 21.81% and holds 18.09% of all bads; FICO's riskiest decile has 16.48% and holds 13.67%. The card concentrates more of the bads in the loans it would decline first.
 
 ## 3. Swap set at matched approval rate
+
+**Population.** The 70% cutoff is applied to loans Lending Club already approved (the booked 2016 vintage). The swap set therefore shows how each score would reorder approvals within the booked population; it does not show outcomes for applicants Lending Club declined, whose outcomes are not observed (NB06).
 
 |  | challenger_approve | challenger_decline |
 |---|---|---|
@@ -70,7 +72,7 @@ Swap-ins: 66,965 loans, bad rate 11.99%. Swap-outs: 66,965 loans, bad rate 17.48
 
 *Note on the incumbent: Lending Club used FICO in its approval, so FICO's range is truncated in this booked population (no loan below a FICO midpoint of 662 in these vintages). Its Gini here understates what FICO does on a full applicant population, and every comparison with FICO in this report measures lift over a truncated incumbent.*
 
-
+DRAFT (Claude, 2026-11-01, for review): Within loans Lending Club already approved, a 70% cutoff on each score approves the same 293,728 loans in number. The 66,965 loans the card would approve instead of FICO's go bad at 11.99%; the 66,965 it would decline instead go bad at 17.48%. The approved book's bad rate falls from 10.50% to 9.25%, 125 fewer bads per 10,000 approvals. The gain is 157 per 10,000 at a 50% approval rate and 60 at 90%. This is a reordering of booked loans; it says nothing about applicants Lending Club declined.
 
 ## 4. Calibration
 
@@ -90,7 +92,32 @@ Swap-ins: 66,965 loans, bad rate 11.99%. Swap-outs: 66,965 loans, bad rate 17.48
 
 Calibration slope 1.012 (95% CI 0.992 to 1.031), intercept 0.287; intercept-only shift 0.262; mean predicted 9.60% vs observed 12.06%. Hosmer-Lemeshow chi2 3061.8 (p = 0). Log-loss 0.3581 vs null 0.3681; Brier 0.1040 (reliability 0.00072, resolution 0.00273).
 
+DRAFT (Claude, 2026-11-01, for review): As developed, the card ranks 2016 correctly (slope 1.012, 95% CI 0.992 to 1.031) but under-predicts the level: 9.60% predicted against 12.06% observed, a calibration-in-the-large shift of 0.262 log-odds, with 8 of 11 score bands outside their interval. Recalibrating only the intercept on 2015 (prior correction, +0.198 log-odds, from the 2013-2014 bad rate of 9.60% to 2015's 11.46%) brings 2016 to 11.41% predicted, a shift of 0.064, with 3 of 11 bands outside (500-560, still under-predicted by 0.6 to 1.2 points). Like for like, the GBM recalibrated on 2015 predicts 11.17% (shift 0.090, slope 0.946). Recalibrated, the two are equally well calibrated in level (Brier 0.1033 card, 0.1029 GBM); the card's slope is closer to 1.
 
+## 4a. Calibration raw and recalibrated on 2015: card and GBM
+
+| model | recalibration_on_2015 | mean_predicted | mean_observed | calib_slope | slope_ci_low | slope_ci_high | calib_intercept | calib_in_the_large | brier |
+|---|---|---|---|---|---|---|---|---|---|
+| Scorecard | none (raw) | 0.0960 | 0.1206 | 1.0117 | 0.9922 | 1.0312 | 0.2869 | 0.2617 | 0.1040 |
+| Scorecard | intercept (prior correction) | 0.1141 | 0.1206 | 1.0117 | 0.9922 | 1.0312 | 0.0866 | 0.0637 | 0.1033 |
+| Tuned GBM | none (raw) | 0.0947 | 0.1206 | 0.9207 | 0.9041 | 0.9373 | 0.1095 | 0.2800 | 0.1035 |
+| Tuned GBM | intercept and slope (logistic) | 0.1117 | 0.1206 | 0.9463 | 0.9292 | 0.9633 | -0.0157 | 0.0898 | 0.1029 |
+
+Scorecard with its intercept recalibrated on 2015, by score band:
+
+| band | n | observed | predicted | lower_95 | upper_95 | within_interval | binomial_p |
+|---|---|---|---|---|---|---|---|
+| [440.0, 460.0) | 122 | 0.3033 | 0.3282 | 0.2449 | 0.4115 | True | 0.6303 |
+| [460.0, 480.0) | 5143 | 0.2578 | 0.2664 | 0.2543 | 0.2785 | True | 0.1683 |
+| [480.0, 500.0) | 32626 | 0.2142 | 0.2102 | 0.2058 | 0.2146 | True | 0.0768 |
+| [500.0, 520.0) | 78150 | 0.1733 | 0.1614 | 0.1589 | 0.1640 | False | 0.0000 |
+| [520.0, 540.0) | 102411 | 0.1322 | 0.1214 | 0.1194 | 0.1234 | False | 0.0000 |
+| [540.0, 560.0) | 95107 | 0.0955 | 0.0897 | 0.0879 | 0.0915 | False | 0.0000 |
+| [560.0, 580.0) | 63810 | 0.0668 | 0.0658 | 0.0639 | 0.0677 | True | 0.3218 |
+| [580.0, 600.0) | 30698 | 0.0465 | 0.0478 | 0.0454 | 0.0502 | True | 0.2859 |
+| [600.0, 620.0) | 9722 | 0.0359 | 0.0348 | 0.0312 | 0.0385 | True | 0.5857 |
+| [620.0, 640.0) | 1765 | 0.0227 | 0.0253 | 0.0180 | 0.0326 | True | 0.5398 |
+| [640.0, 660.0) | 57 | 0.0000 | 0.0187 | 0.0000 | 0.0539 | True | 0.6806 |
 
 ## 4b. Indeterminate sensitivity (2016)
 
@@ -147,7 +174,7 @@ By `vintage_quarter`:
 
 *Note on the incumbent: Lending Club used FICO in its approval, so FICO's range is truncated in this booked population (no loan below a FICO midpoint of 662 in these vintages). Its Gini here understates what FICO does on a full applicant population, and every comparison with FICO in this report measures lift over a truncated incumbent.*
 
-
+DRAFT (Claude, 2026-11-01, for review): The card beats FICO in every term, file-depth and purpose segment with enough loans: 36-month 0.2847 against 0.1834, 60-month 0.3029 against 0.1856, thin files 0.2101 against 0.1128. Both scores lose discrimination through 2016 (card 0.3134 in Q1 to 0.2575 in Q4). Purposes with fewer than 1,000 loans (renewable energy 297, wedding 1) are too small to read.
 
 ## 6. Stability
 
@@ -166,7 +193,7 @@ PSI of the pilot population's scores against development: **0.0009** (verdict st
 | 565.0000 | 578.0000 | 0.0960 | 0.0941 | 0.0000 |
 | 578.0000 | inf | 0.1052 | 0.1118 | 0.0004 |
 
-
+DRAFT (Claude, 2026-11-01, for review): The PSI of 2016 scores against development is 0.0009, stable. It is statistically significant only because the sample is large (critical value 0.00009).
 
 ## 7. Fair lending
 
@@ -191,7 +218,7 @@ Performance and calibration by group:
 | other | 279230 | 0.1191 | 539.6000 | 0.2853 | 0.2088 | 1.0120 | 0.2800 |
 | south | 140381 | 0.1235 | 538.4000 | 0.2806 | 0.2058 | 1.0100 | 0.2980 |
 
-
+DRAFT (Claude, 2026-11-01, for review): The proxy (Southern states against the rest) is a geographic placeholder, not a protected class: approval rates 69.15% and 70.44%, adverse impact ratio 0.9817, score SMD -0.041. This demonstrates the code path; fair-lending testing is out of scope for this data.
 
 ## Appendix: Tuned GBM, recalibrated on 2015
 
@@ -203,6 +230,8 @@ XGBoost tuned on 2015 (NB07b), probabilities mapped to the 2015 level with a log
 | incumbent | 0.1805 | 0.0026 | 0.1354 |
 
 Gini lift over the incumbent: **0.1249** (DeLong p = 0; bootstrap 95% CI 0.1190 to 0.1306). Level: out-of-time (2016 vintage).
+
+**Population.** The 70% cutoff is applied to loans Lending Club already approved (the booked 2016 vintage). The swap set therefore shows how each score would reorder approvals within the booked population; it does not show outcomes for applicants Lending Club declined, whose outcomes are not observed (NB06).
 
 |  | challenger_approve | challenger_decline |
 |---|---|---|
@@ -243,3 +272,4 @@ Calibration slope 0.946, intercept -0.016, intercept-only shift 0.090; mean pred
 - Lending Club used FICO in its approval, so FICO's range is truncated in this booked population (no loan below a FICO midpoint of 662 in these vintages). Its Gini here understates what FICO does on a full applicant population, and every comparison with FICO in this report measures lift over a truncated incumbent.
 - The tuned GBM in the appendix was recalibrated on 2015 (a two-parameter logistic map) before scoring 2016; its ranking is unchanged by the recalibration.
 - Indeterminate loans (first miss inside 24 months, 90 DPD in months 25-27) are excluded from every exhibit except the indeterminate-sensitivity section.
+- Sections 1-4 show the card as developed (2013-2014 intercept). Section 4a adds the card with its intercept recalibrated on 2015 by prior correction; scores, ranking and the swap set are unchanged by it.

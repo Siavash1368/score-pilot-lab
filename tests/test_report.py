@@ -46,3 +46,13 @@ def test_report_prints_incumbent_caveat_and_appendix(scored, tmp_path):
                                    appendix=REP.challenger_appendix("GBM", ex, note="recalibrated"))
     assert md.count("FICO is truncated") == 4                                     # discrimination, gains, swap set, segments
     assert "## Indeterminates" in md and "## Appendix: GBM" in md and (tmp_path / "r.md").exists()
+
+
+def test_swap_set_note_printed_in_section_and_appendix(scored):
+    oot, _ = scored
+    ex = REP.pilot_exhibits(oot, oot["score"], n_boot=20, level="test")
+    note = "Cutoff applied to booked loans only."
+    md = REP.assemble_pilot_report(ex, "t", "l", swap_set_note=note,
+                                   appendix=REP.challenger_appendix("GBM", ex, swap_set_note=note))
+    swap = md[md.index("## 3. Swap set"):md.index("## 4. Calibration")]
+    assert note in swap and md.count(note) == 2

@@ -141,3 +141,26 @@ were re-run on full data after the fix.
   train applicants who have a bankcard limit.
 - **Effect on the card.** None of substance: the same 8 attributes, coefficients within 0.0001, OOT Gini
   0.2838 unchanged.
+
+## 2026-11-01 — Stage 3 follow-ups (NB07b, NB08, NB09); decision cells still DRAFT
+
+- **Swap set at a matched approval rate.** `validation.swap_set` approves exactly k loans under each score; ties at
+  the cutoff (FICO moves in 5-point steps) are broken by one seeded random key shared by both scores. Before, FICO
+  approved 72.9% at a "70%" cutoff. The report states that the cutoff is applied to loans Lending Club already
+  approved, so the swap set is a reordering within the booked population.
+- **Deployed card.** The card's intercept is recalibrated on 2015 by prior correction
+  (`target.prior_correct_intercept`, +0.198 log-odds). NB08 shows raw and recalibrated calibration for the card and
+  the tuned GBM side by side; NB09 monitors the recalibrated card and reports the development-to-deployment shift
+  once (2016 calibration-in-the-large 0.262 as developed, 0.064 deployed).
+- **Monitoring rule** (`monitoring.decide_action`, `decide_periods`). Each period's Gini is judged against its own
+  DeLong interval and against the Gini the card expects on that period's population if its PDs were true
+  (`monitoring.expected_gini`: expected concordant pairs over expected pairs, deterministic), with interval
+  expected ± 1.96 × the observed Gini's DeLong SE. A breach (below reference and below expected by more than half
+  that width) gives watch on its first quarter and re-estimate (redevelop with CSI > 0.25) on the second
+  consecutive one; at or above expected is a population shift (investigate, no model change). Result: 2016Q3
+  watch, 2016Q4 and 2017Q1 re-estimate.
+- **Covariate-shift simulation** now draws half the loans without replacement, tilted towards the attributes, so
+  P(Y|X) is unchanged; the old version shifted recorded attributes while keeping outcomes.
+- **NB07b reproducibility.** The XGBoost search is pinned to the 23 trials the first full run completed and the
+  wall-clock caps are off; the re-run reproduced the tuned model byte for byte. Paired DeLong, tuned XGBoost
+  minus monotone EBM: +0.0064 Gini on 2015 (95% CI 0.0055 to 0.0074), +0.0058 on 2016 (0.0048 to 0.0068).

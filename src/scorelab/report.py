@@ -76,13 +76,14 @@ def _md_table(df: pd.DataFrame, max_rows: int = 40) -> str:
 def assemble_pilot_report(ex: dict, title: str, lender: str, interpretation: dict[str, str] | None = None,
                           caveats: list[str] | None = None, path: str | Path | None = None,
                           incumbent_caveat: str | None = None, appendix: str | None = None,
-                          extra_sections: dict[str, str] | None = None) -> str:
+                          extra_sections: dict[str, str] | None = None, swap_set_note: str | None = None) -> str:
     """Markdown pilot report from ``pilot_exhibits``. ``interpretation`` maps exhibit name -> your
     paragraph (written by a person, not generated). Every section states the validation level.
 
     ``incumbent_caveat`` is printed under every exhibit that compares the challenger with the incumbent
     (discrimination, gains, swap set, segments). ``extra_sections`` maps a heading -> markdown, placed
-    after the calibration section; ``appendix`` is added at the end, before the caveats."""
+    after the calibration section; ``appendix`` is added at the end, before the caveats. ``swap_set_note`` is
+    printed at the top of the swap-set section (e.g. which population the cutoff is applied to)."""
     i = interpretation or {}
     lv = ex["level"]; sw = ex["swap_set"]; gl = ex["gini_lift"]; cf = ex["calibration_fit"]
     note = [f"*Note on the incumbent: {incumbent_caveat}*", ""] if incumbent_caveat else []
@@ -92,7 +93,7 @@ def assemble_pilot_report(ex: dict, title: str, lender: str, interpretation: dic
               f"Gini lift challenger - incumbent: **{gl['gini_diff']:.4f}** (DeLong z = {gl['z']:.2f}, p = {gl['p_value']:.3g}; "
               f"bootstrap 95% CI {gl['bootstrap_ci'][0]:.4f} to {gl['bootstrap_ci'][1]:.4f}). Level: {lv}.", ""] + note + [i.get("discrimination", ""), ""]
     parts += ["## 2. Gains tables", "", "Challenger:", "", _md_table(ex["gains_challenger"]), "", "Incumbent:", "", _md_table(ex["gains_incumbent"]), ""] + note + [i.get("gains", ""), ""]
-    parts += ["## 3. Swap set at matched approval rate", "", _md_table(sw["crosstab"].reset_index().rename(columns={"index": ""})), "",
+    parts += ["## 3. Swap set at matched approval rate", ""] + ([swap_set_note, ""] if swap_set_note else []) + [_md_table(sw["crosstab"].reset_index().rename(columns={"index": ""})), "",
               f"Swap-ins: {sw['n_swap_in']:,} loans, bad rate {sw['bad_rate_swap_in']:.2%}. Swap-outs: {sw['n_swap_out']:,} loans, bad rate "
               f"{sw['bad_rate_swap_out']:.2%}. Approved-book bad rate: incumbent {sw['bad_rate_approved_incumbent']:.2%}, challenger "
               f"{sw['bad_rate_approved_challenger']:.2%} ({sw['bads_avoided_per_10k_approved']:.0f} bads avoided per 10,000 approvals).", "",
@@ -124,13 +125,15 @@ def assemble_pilot_report(ex: dict, title: str, lender: str, interpretation: dic
     return md
 
 
-def challenger_appendix(name: str, ex: dict, note: str = "", incumbent_caveat: str | None = None) -> str:
+def challenger_appendix(name: str, ex: dict, note: str = "", incumbent_caveat: str | None = None,
+                        swap_set_note: str | None = None) -> str:
     """A compact report section for a second challenger (e.g. a recalibrated GBM) computed with
     :func:`pilot_exhibits`: discrimination, swap set at the same approval rate, calibration."""
     sw = ex["swap_set"]; gl = ex["gini_lift"]; cf = ex["calibration_fit"]
     parts = [f"## Appendix: {name}", "", note, "", _md_table(ex["discrimination"]), "",
              f"Gini lift over the incumbent: **{gl['gini_diff']:.4f}** (DeLong p = {gl['p_value']:.3g}; bootstrap 95% CI "
              f"{gl['bootstrap_ci'][0]:.4f} to {gl['bootstrap_ci'][1]:.4f}). Level: {ex['level']}.", "",
+             *([swap_set_note, ""] if swap_set_note else []),
              _md_table(sw["crosstab"].reset_index().rename(columns={"index": ""})), "",
              f"Swap-ins {sw['n_swap_in']:,} (bad rate {sw['bad_rate_swap_in']:.2%}); swap-outs {sw['n_swap_out']:,} "
              f"(bad rate {sw['bad_rate_swap_out']:.2%}); approved-book bad rate {sw['bad_rate_approved_challenger']:.2%} against "
