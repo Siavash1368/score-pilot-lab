@@ -1,0 +1,8 @@
+method,inferred_bad_rate_declined,true_bad_rate_declined,gini_through_the_door,gini_approved_only,gini_declined_only,gini_eval_set
+kgb_only,,0.1407,0.2927,0.2932,0.2283,0.2859
+hard_cutoff,0.243,0.1407,0.2927,0.2928,0.2302,0.2862
+parceling_x1,0.1261,0.1407,0.2927,0.2932,0.2283,0.2858
+parceling_x1.5,0.1893,0.1407,0.292,0.2926,0.2255,0.2851
+parceling_x2,0.2519,0.1407,0.2905,0.2912,0.2226,0.2836
+fuzzy_augmentation,0.1262,0.1407,0.2927,0.2932,0.2283,0.2859
+self_training,0.1732,0.1407,0.2915,0.2909,0.2327,0.2848

@@ -42,6 +42,16 @@ def test_swap_set_identity_and_counts(synth):
     tbl = other["crosstab"]; assert tbl.values.sum() == len(oot)
 
 
+def test_swap_set_matches_approval_rate_with_tied_scores(synth):
+    oot = synth[synth.split == "oot"]
+    coarse = (oot["fico_mid"] // 20) * 20                                       # heavy ties at any cutoff
+    s = V.swap_set(oot["bad"], coarse, -oot["util"], 0.7)
+    k = int(round(0.7 * len(oot))); tbl = s["crosstab"]
+    assert tbl.loc["incumbent_approve"].sum() == k and tbl["challenger_approve"].sum() == k
+    assert s["n_swap_in"] == s["n_swap_out"]
+    assert V.swap_set(oot["bad"], coarse, coarse, 0.7)["n_swap_in"] == 0          # same score, same decisions
+
+
 def test_calibration_slope_recovers_truth_and_shift():
     rng = np.random.default_rng(1); eta = rng.normal(-2, 1, 40000); y = (rng.uniform(size=40000) < 1 / (1 + np.exp(-eta))).astype(int)
     c = V.calibration_slope_intercept(y, eta)
@@ -72,3 +82,19 @@ def test_fairness_air_and_smd():
     assert air.loc["a", "reference"] and air.loc["b", "air"] < 1.0
     smd = F.standardized_mean_difference(s, g).set_index("group")
     assert smd.loc["b", "smd_vs_reference"] < 0
+
+
+def test_recalibration_fixes_level_and_keeps_rank(synth):
+    va, oot = synth[synth.split == "validate"], synth[synth.split == "oot"]
+    eta = -2.6 + 0.012 * synth["util"] + 0.25 * synth["inq"]
+    p_true = 1 / (1 + np.exp(-eta))
+    p_off = 1 / (1 + np.exp(-(0.5 * eta - 1.0)))                     # wrong level and spread, same ranking
+    cal = V.fit_recalibration(va["bad"], p_off.loc[va.index])
+    p_new = V.apply_recalibration(p_off.loc[oot.index], cal)
+    assert cal["b"] > 1.5                                              # undoes the halved spread
+    assert V.auc_gini_ks(oot["bad"], p_new, higher_is_safer=False)["gini"] == pytest.approx(
+        V.auc_gini_ks(oot["bad"], p_off.loc[oot.index], higher_is_safer=False)["gini"], abs=1e-12)
+    c = V.calibration_slope_intercept(oot["bad"], np.log(p_new / (1 - p_new)))
+    assert abs(c["slope"] - 1) < 0.25 and abs(c["intercept_only_shift"]) < 0.15
+    tab = V.model_comparison(oot["bad"], {"m": p_new})
+    assert {"calib_slope", "calib_intercept", "calib_in_the_large"} <= set(tab.columns)

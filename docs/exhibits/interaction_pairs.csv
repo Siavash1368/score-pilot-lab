@@ -1,0 +1,16 @@
+a,b,mean_abs_interaction,main_a,main_b,share_of_interaction,h2
+tot_cur_bal,tot_hi_cred_lim,0.02915,0.02389,0.1146,0.04211,0.01
+bc_open_to_buy,new_trades_share_24m,0.01857,0.08226,0.16223,0.02682,0.0129
+percent_bc_gt_75,bc_open_to_buy,0.01646,0.11684,0.08226,0.02378,0.0093
+percent_bc_gt_75,total_bc_limit,0.01594,0.11684,0.03473,0.02302,0.0263
+new_trades_share_24m,bal_ex_mort_to_limit,0.01554,0.16223,0.07888,0.02244,0.0083
+mths_since_recent_inq,new_trades_share_24m,0.01336,0.11015,0.16223,0.0193,0.0046
+mths_since_recent_inq,mo_sin_rcnt_tl,0.01299,0.11015,0.04786,0.01877,0.0138
+mths_since_recent_inq,percent_bc_gt_75,0.01206,0.11015,0.11684,0.01742,0.0054
+inq_last_6mths,mths_since_recent_inq,0.00932,0.05114,0.11015,0.01347,
+revol_bal,tot_cur_bal,0.00932,0.05636,0.02389,0.01346,
+percent_bc_gt_75,new_trades_share_24m,0.00916,0.11684,0.16223,0.01324,
+acc_open_past_24mths,new_trades_share_24m,0.00875,0.07961,0.16223,0.01264,
+revol_bal,tot_hi_cred_lim,0.0087,0.05636,0.1146,0.01257,
+mths_since_recent_inq,bc_open_to_buy,0.00862,0.11015,0.08226,0.01245,
+percent_bc_gt_75,tot_hi_cred_lim,0.00858,0.11684,0.1146,0.0124,

@@ -178,6 +178,16 @@ def score(df: pd.DataFrame, card: Scorecard, specs: dict[str, BinSpec], clip: bo
     return pd.DataFrame({"eta": eta, "p_bad": pb, "score": np.round(sc).astype(int)}, index=df.index)
 
 
+def scale_probability(p, card: Scorecard, clip: bool = True) -> np.ndarray:
+    """Put any model's probability of bad on the card's score scale (same base score, odds and PDO), so a
+    challenger and the card can be read on one axis: score = Offset - Factor * logit(p)."""
+    p = np.clip(np.asarray(p, dtype=float), 1e-9, 1 - 1e-9)
+    sc = card.offset - card.factor * np.log(p / (1 - p))
+    if clip:
+        sc = np.clip(sc, config.SCORE_MIN, config.SCORE_MAX)
+    return np.round(sc).astype(int)
+
+
 def reason_codes(df: pd.DataFrame, card: Scorecard, specs: dict[str, BinSpec], n_codes: int = config.N_REASON_CODES,
                  meanings: dict[str, str] | None = None, missing_reasons: dict[str, str] | None = None) -> pd.DataFrame:
     """Top ``n_codes`` reasons per row by points lost against each attribute's best bin

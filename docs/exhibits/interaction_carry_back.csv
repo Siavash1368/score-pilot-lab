@@ -1,0 +1,4 @@
+pair,thresholds,iv,entered,gini_before,gini_after,gini_gain,p_value
+tot_cur_bal_x_tot_hi_cred_lim,"(224366.0, 224087.0)",0.0402,False,0.2838,0.2838,0.0,
+bc_open_to_buy_x_new_trades_share_24m,"(2680.0, 0.177)",0.1055,False,0.2838,0.2838,0.0,
+percent_bc_gt_75_x_bc_open_to_buy,"(30.0, 2680.0)",0.0397,False,0.2838,0.2838,0.0,

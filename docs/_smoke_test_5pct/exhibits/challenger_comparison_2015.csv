@@ -1,0 +1,11 @@
+model,inputs,auc,gini,gini_ci_low,gini_ci_high,ks,brier,log_loss,calib_slope,calib_intercept,calib_in_the_large,gini_vs_ref,gini_vs_ref_ci_low,gini_vs_ref_ci_high,ci_excludes_zero,delong_p_vs_ref,fit_seconds,explainability
+Stacked ensemble,"log-odds of: XGBoost (tuned, monotone), Random forest (monotone), EBM (monotone, main effects), MLP (raw, 29 candidates)",0.6554,0.3107,0.2881,0.3334,0.2277,0.1013,0.3484,1.0017,0.0033,0.0001,0.0404,0.0266,0.0543,True,0.0,0.0893,
+LightGBM (monotone),"raw, 29 NB03 candidates (missing native)",0.653,0.3059,0.2833,0.3286,0.2241,0.1022,0.3523,1.1808,0.6396,0.2491,0.0356,0.0212,0.05,True,0.0,1.4404,
+XGBoost (NB07 defaults),"raw, 29 NB03 candidates (missing native)",0.6526,0.3052,0.2825,0.328,0.2293,0.1023,0.3527,1.1983,0.6901,0.2597,0.0349,0.0207,0.0491,True,0.0,2.2487,
+"EBM (10 pairs, unconstrained)","raw, 29 NB03 candidates (missing native)",0.6522,0.3045,0.2818,0.3272,0.2279,0.1022,0.3525,1.0558,0.3815,0.261,0.0341,0.0184,0.0499,True,0.0,10.6937,
+"XGBoost (tuned, monotone)","raw, 29 NB03 candidates (missing native)",0.6521,0.3042,0.2815,0.3269,0.2269,0.1024,0.3532,1.3133,0.9417,0.2593,0.0339,0.0199,0.0478,True,0.0,3.172,
+"EBM (monotone, main effects)","raw, 29 NB03 candidates (missing native)",0.6506,0.3012,0.2784,0.3239,0.229,0.1022,0.3528,1.0549,0.3736,0.2551,0.0308,0.0152,0.0464,True,0.0001,18.2475,
+Random forest (monotone),"raw, 29 NB03 candidates (missing native)",0.6493,0.2987,0.2761,0.3212,0.2213,0.1034,0.3571,2.1988,2.9121,0.2607,0.0283,0.0157,0.041,True,0.0,2.6233,
+"MLP (WOE, 10 binned)","WOE, 10 NB04 binned attributes",0.6461,0.2923,0.2694,0.3152,0.2207,0.1026,0.3544,1.0725,0.4352,0.2769,0.022,0.0113,0.0327,True,0.0001,3.8315,
+"MLP (raw, 29 candidates)","raw, 29 NB03 candidates, standardised, median-imputed + missing flags (fit on 2012-14)",0.638,0.2759,0.2529,0.2989,0.2153,0.1028,0.3576,0.6959,-0.3903,0.2618,0.0056,-0.0143,0.0255,False,0.5826,5.3969,
+Scorecard (champion),"WOE, 5 card attributes",0.6352,0.2703,0.2473,0.2933,0.1998,0.1028,0.3553,1.0569,0.3555,0.2329,0.0,,,,,,

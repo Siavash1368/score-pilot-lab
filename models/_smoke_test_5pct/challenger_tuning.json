@@ -1,5 +1,7 @@
 {
  "best": "XGBoost (tuned, monotone)",
+ "chosen": "XGBoost (tuned, monotone)",
+ "best_on_2015": "LightGBM (monotone)",
  "xgb_params": {
   "max_depth": 6,
   "min_child_weight": 40.66563313514794,
@@ -42,75 +44,173 @@
   "Stacked ensemble": "log-odds of: XGBoost (tuned, monotone), Random forest (monotone), EBM (monotone, main effects), MLP (raw, 29 candidates)"
  },
  "stack_weights": {
-  "XGBoost (tuned, monotone)": 0.5538464258152598,
-  "Random forest (monotone)": 0.534946549267014,
-  "EBM (monotone, main effects)": 0.2080859922375676,
-  "MLP (raw, 29 candidates)": 0.19551700476866404
+  "XGBoost (tuned, monotone)": 0.41158850402973884,
+  "Random forest (monotone)": 0.7449082755931996,
+  "EBM (monotone, main effects)": 0.21959144425383018,
+  "MLP (raw, 29 candidates)": 0.18039863912698895
+ },
+ "recalibration_2015": {
+  "a": 0.9417003186144963,
+  "b": 1.3132841660335453,
+  "n": 20426,
+  "mean_observed": 0.11877019484970136,
+  "mean_predicted_before": 0.094572429360017
  },
  "n_trials": {
   "xgb": 6,
-  "mlp": 4
+  "xgb_budget": 6,
+  "mlp_budget": 4
  },
- "ranking_oot": [
+ "ranking_2015": [
   {
    "model": "Stacked ensemble",
-   "gini": 0.2935,
-   "gini_ci_low": 0.2716,
-   "gini_ci_high": 0.3154
-  },
-  {
-   "model": "EBM (10 pairs, unconstrained)",
-   "gini": 0.2931,
-   "gini_ci_low": 0.2712,
-   "gini_ci_high": 0.3151
-  },
-  {
-   "model": "XGBoost (NB07 defaults)",
-   "gini": 0.292,
-   "gini_ci_low": 0.2702,
-   "gini_ci_high": 0.3138
-  },
-  {
-   "model": "XGBoost (tuned, monotone)",
-   "gini": 0.2916,
-   "gini_ci_low": 0.2698,
-   "gini_ci_high": 0.3134
-  },
-  {
-   "model": "EBM (monotone, main effects)",
-   "gini": 0.2909,
-   "gini_ci_low": 0.2689,
-   "gini_ci_high": 0.3129
+   "gini": 0.3107,
+   "gini_ci_low": 0.2881,
+   "gini_ci_high": 0.3334
   },
   {
    "model": "LightGBM (monotone)",
-   "gini": 0.2902,
-   "gini_ci_low": 0.2684,
-   "gini_ci_high": 0.312
+   "gini": 0.3059,
+   "gini_ci_low": 0.2833,
+   "gini_ci_high": 0.3286
+  },
+  {
+   "model": "XGBoost (NB07 defaults)",
+   "gini": 0.3052,
+   "gini_ci_low": 0.2825,
+   "gini_ci_high": 0.328
+  },
+  {
+   "model": "EBM (10 pairs, unconstrained)",
+   "gini": 0.3045,
+   "gini_ci_low": 0.2818,
+   "gini_ci_high": 0.3272
+  },
+  {
+   "model": "XGBoost (tuned, monotone)",
+   "gini": 0.3042,
+   "gini_ci_low": 0.2815,
+   "gini_ci_high": 0.3269
+  },
+  {
+   "model": "EBM (monotone, main effects)",
+   "gini": 0.3012,
+   "gini_ci_low": 0.2784,
+   "gini_ci_high": 0.3239
   },
   {
    "model": "Random forest (monotone)",
-   "gini": 0.2757,
-   "gini_ci_low": 0.2536,
-   "gini_ci_high": 0.2978
-  },
-  {
-   "model": "MLP (raw, 29 candidates)",
-   "gini": 0.2639,
-   "gini_ci_low": 0.2416,
-   "gini_ci_high": 0.2862
+   "gini": 0.2987,
+   "gini_ci_low": 0.2761,
+   "gini_ci_high": 0.3212
   },
   {
    "model": "MLP (WOE, 10 binned)",
-   "gini": 0.2579,
-   "gini_ci_low": 0.2356,
-   "gini_ci_high": 0.2801
+   "gini": 0.2923,
+   "gini_ci_low": 0.2694,
+   "gini_ci_high": 0.3152
+  },
+  {
+   "model": "MLP (raw, 29 candidates)",
+   "gini": 0.2759,
+   "gini_ci_low": 0.2529,
+   "gini_ci_high": 0.2989
   },
   {
    "model": "Scorecard (champion)",
-   "gini": 0.2492,
-   "gini_ci_low": 0.2268,
-   "gini_ci_high": 0.2716
+   "gini": 0.2703,
+   "gini_ci_low": 0.2473,
+   "gini_ci_high": 0.2933
+  }
+ ],
+ "ranking_oot": [
+  {
+   "model": "Stacked ensemble",
+   "gini": 0.2953,
+   "gini_ci_low": 0.2732,
+   "gini_ci_high": 0.3175,
+   "calib_slope": 0.97,
+   "calib_intercept": -0.0107
+  },
+  {
+   "model": "LightGBM (monotone)",
+   "gini": 0.2943,
+   "gini_ci_low": 0.2722,
+   "gini_ci_high": 0.3164,
+   "calib_slope": 1.1633,
+   "calib_intercept": 0.6528
+  },
+  {
+   "model": "XGBoost (NB07 defaults)",
+   "gini": 0.2942,
+   "gini_ci_low": 0.2722,
+   "gini_ci_high": 0.3163,
+   "calib_slope": 1.1844,
+   "calib_intercept": 0.7092
+  },
+  {
+   "model": "EBM (10 pairs, unconstrained)",
+   "gini": 0.2939,
+   "gini_ci_low": 0.2717,
+   "gini_ci_high": 0.3161,
+   "calib_slope": 1.0213,
+   "calib_intercept": 0.3597
+  },
+  {
+   "model": "XGBoost (tuned, monotone)",
+   "gini": 0.2911,
+   "gini_ci_low": 0.269,
+   "gini_ci_high": 0.3132,
+   "calib_slope": 1.2868,
+   "calib_intercept": 0.9315
+  },
+  {
+   "model": "XGBoost (tuned, recalibrated on 2015)",
+   "gini": 0.2911,
+   "gini_ci_low": 0.269,
+   "gini_ci_high": 0.3132,
+   "calib_slope": 0.9799,
+   "calib_intercept": 0.0088
+  },
+  {
+   "model": "EBM (monotone, main effects)",
+   "gini": 0.2902,
+   "gini_ci_low": 0.2679,
+   "gini_ci_high": 0.3125,
+   "calib_slope": 1.0225,
+   "calib_intercept": 0.3538
+  },
+  {
+   "model": "Random forest (monotone)",
+   "gini": 0.2774,
+   "gini_ci_low": 0.2552,
+   "gini_ci_high": 0.2997,
+   "calib_slope": 2.1014,
+   "calib_intercept": 2.7338
+  },
+  {
+   "model": "MLP (WOE, 10 binned)",
+   "gini": 0.2699,
+   "gini_ci_low": 0.2475,
+   "gini_ci_high": 0.2924,
+   "calib_slope": 1.015,
+   "calib_intercept": 0.3494
+  },
+  {
+   "model": "MLP (raw, 29 candidates)",
+   "gini": 0.2624,
+   "gini_ci_low": 0.2398,
+   "gini_ci_high": 0.285,
+   "calib_slope": 0.6583,
+   "calib_intercept": -0.4286
+  },
+  {
+   "model": "Scorecard (champion)",
+   "gini": 0.2535,
+   "gini_ci_low": 0.2309,
+   "gini_ci_high": 0.2761,
+   "calib_slope": 1.0224,
+   "calib_intercept": 0.3033
   }
  ]
 }

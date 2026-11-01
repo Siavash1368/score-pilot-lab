@@ -99,19 +99,28 @@ def gains_table(y, x, n_bands: int = 10, higher_is_safer: bool = True) -> pd.Dat
 
 # --- Swap set -------------------------------------------------------------------------------
 
-def swap_set(y, incumbent, challenger, approval_rate: float, higher_is_safer: bool = True) -> dict:
+def _approve_top_k(score: np.ndarray, k: int, tiebreak: np.ndarray) -> np.ndarray:
+    """Approve exactly ``k`` loans with the highest score; ties at the cutoff are broken by ``tiebreak``."""
+    a = np.zeros(len(score), dtype=bool)
+    a[np.lexsort((tiebreak, -score))[:k]] = True
+    return a
+
+
+def swap_set(y, incumbent, challenger, approval_rate: float, higher_is_safer: bool = True, seed: int = 0) -> dict:
     """Decisions at a matched approval rate: approve the safest ``approval_rate`` share under each score.
 
-    Returns the 2x2 of decisions, the bad rates of swap-ins (approved by challenger only) and swap-outs
-    (approved by incumbent only), and the approved-book bad rate under each score.
+    Both scores approve exactly the same number of loans. Coarse scores (FICO moves in 5-point steps) tie at
+    the cutoff; the tied loans are split by one seeded random key shared by both scores, so identical scores
+    give identical decisions. Returns the 2x2 of decisions, the bad rates of swap-ins (approved by challenger
+    only) and swap-outs (approved by incumbent only), and the approved-book bad rate under each score.
     """
     y = np.asarray(y, dtype=int)
     inc = np.asarray(incumbent, dtype=float); ch = np.asarray(challenger, dtype=float)
     if not higher_is_safer:
         inc, ch = -inc, -ch
     k = int(round(approval_rate * len(y)))
-    inc_cut = np.sort(inc)[::-1][k - 1]; ch_cut = np.sort(ch)[::-1][k - 1]
-    a_inc = inc >= inc_cut; a_ch = ch >= ch_cut
+    key = np.random.default_rng(seed).random(len(y))
+    a_inc = _approve_top_k(inc, k, key); a_ch = _approve_top_k(ch, k, key)
     both = a_inc & a_ch; swap_in = a_ch & ~a_inc; swap_out = a_inc & ~a_ch; neither = ~a_inc & ~a_ch
 
     def rate(m): return float(y[m].mean()) if m.sum() else float("nan")
@@ -168,6 +177,28 @@ def calibration_slope_intercept(y, eta) -> dict:
             "mean_predicted": float(np.mean(1 / (1 + np.exp(-e)))), "mean_observed": float(yv.mean())}
 
 
+def fit_recalibration(y, p) -> dict:
+    """Logistic recalibration (Cox / Platt on the log-odds): logit(p_new) = a + b * logit(p).
+
+    Fit on a vintage the model was not trained on (here the 2015 validation year), then applied unchanged
+    to later years. Rank order is untouched when b > 0, so Gini and KS do not change; only the level and
+    spread of the probabilities do."""
+    c = calibration_slope_intercept(y, _logit(p))
+    return {"a": c["intercept"], "b": c["slope"], "n": int(len(np.asarray(y))), "mean_observed": c["mean_observed"],
+            "mean_predicted_before": c["mean_predicted"]}
+
+
+def apply_recalibration(p, cal: dict) -> np.ndarray:
+    """Recalibrated probabilities from :func:`fit_recalibration` parameters."""
+    eta = cal["a"] + cal["b"] * _logit(p)
+    return 1 / (1 + np.exp(-eta))
+
+
+def _logit(p) -> np.ndarray:
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    return np.log(p / (1 - p))
+
+
 def hosmer_lemeshow(y, p, n_groups: int = 10) -> dict:
     df = pd.DataFrame({"y": np.asarray(y, dtype=int), "p": np.asarray(p, dtype=float)})
     df["g"] = pd.qcut(df.p.rank(method="first"), n_groups, labels=False)
@@ -197,7 +228,8 @@ def model_comparison(y, preds: dict[str, np.ndarray], reference: str | None = No
                      fit_seconds: dict[str, float] | None = None, notes: dict[str, str] | None = None,
                      inputs: dict[str, str] | None = None) -> pd.DataFrame:
     """One row per model on the same rows: its input set, AUC and Gini with DeLong 95% CI, KS, Brier,
-    log-loss, Cox calibration slope and intercept-only shift, fit time and an explainability note.
+    log-loss, Cox calibration slope and intercept (logit(y) = a + b * eta), the intercept-only shift
+    (calibration-in-the-large, b fixed at 1), fit time and an explainability note.
 
     ``preds`` maps model name -> probability of bad. With ``reference`` (a key of ``preds``), each
     row also carries its Gini difference from the reference with the paired DeLong 95% CI, whether
@@ -212,7 +244,8 @@ def model_comparison(y, preds: dict[str, np.ndarray], reference: str | None = No
                "gini_ci_low": d["gini_ci"][0],
                "gini_ci_high": d["gini_ci"][1], "ks": auc_gini_ks(y, p, higher_is_safer=False)["ks"],
                "brier": float(brier_score_loss(y, p)), "log_loss": float(_log_loss(y, p)),
-               "calib_slope": cal["slope"], "calib_in_the_large": cal["intercept_only_shift"]}
+               "calib_slope": cal["slope"], "calib_intercept": cal["intercept"],
+               "calib_in_the_large": cal["intercept_only_shift"]}
         if reference is not None:
             if name == reference:
                 row.update({"gini_vs_ref": 0.0, "gini_vs_ref_ci_low": np.nan, "gini_vs_ref_ci_high": np.nan,
