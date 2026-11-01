@@ -1,4 +1,4 @@
-"""DuckDB access: one read-only entry point for notebooks, the MCP server and the agent."""
+"""DuckDB access: one read-only entry point for notebooks and scripts."""
 
 from __future__ import annotations
 

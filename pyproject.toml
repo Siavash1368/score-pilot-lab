@@ -28,8 +28,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "mlflow", "streamlit", "kaggle"]
 extended = ["optuna", "interpret-core"]   # NB07b: hyper-parameter search, EBM
-ai = ["anthropic", "mcp", "httpx"]
-finetune = ["transformers", "peft", "datasets", "accelerate"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

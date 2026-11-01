@@ -1,6 +1,6 @@
 """Paths and project-wide constants (spec section 5.2).
 
-Every module, the MCP server and the agent read these values from here, so a
+Every module and notebook reads these values from here, so a
 change made once applies to every number the project produces.
 """
 

@@ -4,7 +4,7 @@ Run after changing the target definition in scorelab.config or scorelab.target:
 
     python scripts/refresh_views.py
 
-Opens the database in write mode (close notebooks and the MCP server first).
+Opens the database in write mode (close notebook kernels first).
 """
 
 from __future__ import annotations

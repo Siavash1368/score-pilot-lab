@@ -23,11 +23,6 @@ mlflow
 streamlit
 kaggle
 
-# AI part (MCP, agent)
-anthropic
-mcp
-httpx
-
 # notebooks
 ipykernel
 jupyter

@@ -1,6 +1,5 @@
 """The lender-pilot report (NB08): one function that computes every exhibit from scored frames, and
-one that writes them as markdown. ``pilot_exhibits`` is also what the MCP ``run_pilot`` tool wraps,
-so the agent and the notebook produce the same numbers from the same code path.
+one that writes them as markdown.
 """
 
 from __future__ import annotations

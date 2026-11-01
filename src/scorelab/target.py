@@ -19,8 +19,8 @@ A loan is *observable* when ``issue_d + window <= PERFORMANCE_SNAPSHOT``; labels
 otherwise. The censored monitor vintages carry an early indicator instead: 60+ DPD within
 ``EARLY_WINDOW_MONTHS``.
 
-Everything here is SQL executed by DuckDB, exposed in one view (``v_target``) so the notebooks,
-the MCP server and the agent read the same label. Only ``build_db.py`` and
+Everything here is SQL executed by DuckDB, exposed in one view (``v_target``) so every notebook
+reads the same label. Only ``build_db.py`` and
 ``scripts/refresh_views.py`` call :func:`create_views`.
 """
 

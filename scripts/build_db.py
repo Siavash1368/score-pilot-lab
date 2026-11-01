@@ -239,7 +239,7 @@ def build_views(con: duckdb.DuckDBPyConnection) -> None:
                 + ", ".join(q(c) for c in fields) + " FROM accepted")
 
     # v_target (24-month label, indeterminates, early indicator) and v_split (exclusive vintage
-    # split) are defined once in scorelab.target so notebooks, the MCP server and the agent read
+    # split) are defined once in scorelab.target so every notebook and script reads
     # the same SQL. scripts/refresh_views.py recreates them without rebuilding the tables.
     target.create_views(con)
 

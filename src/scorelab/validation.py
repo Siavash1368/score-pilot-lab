@@ -1,7 +1,7 @@
 """Discrimination, calibration, stability and swap-set analysis (NB08, NB09, NB07).
 
 Every function takes arrays or Series and returns numbers or tables; nothing plots and nothing
-reads the database, so the same code runs in the notebooks, the MCP server and the agent.
+reads the database, so the same code runs in every notebook.
 
 Conventions: ``y`` is 1 = bad. A *score* is higher = safer (300-850); a *probability* or *eta* is
 higher = riskier. Functions say which they expect; ``higher_is_safer`` flips where needed.
