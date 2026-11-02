@@ -4,7 +4,7 @@ This is a consumer credit scorecard built on Lending Club loans from 2007 to 201
 
 The analytics are written once, in a small Python package, and the notebooks call it rather than repeating the work. Every number in a report therefore comes from the same code path as the number in the notebook.
 
-**Headline results.** On the 2016 out-of-time loans the scorecard reaches a Gini of 0.284 against 0.181 for the FICO midpoint, a lift of 0.103 (bootstrap 95% interval 0.098 to 0.109); Lending Club approved largely on FICO, so FICO's range is truncated in these loans and the lift is measured over a truncated incumbent. At a matched 70% approval rate within the booked loans, the approved book's bad rate is 9.25% under the scorecard against 10.50% under FICO. A tuned XGBoost with monotone constraints adds 0.0215 Gini over the scorecard (95% interval 0.0194 to 0.0235). About two thirds of that kind of gain comes from the wider input set rather than the model form: in notebook 07 an XGBoost limited to the scorecard's eight attributes gains only 0.0072 of a 0.0208 lift.
+**Headline results.** On 2016 out-of-time loans the scorecard reaches a Gini of 0.284 against 0.181 for FICO, which is truncated in this booked population. At a matched 70% approval rate, the approved book's bad rate falls from 10.50% under FICO to 9.25% under the scorecard. A tuned monotone XGBoost adds 0.0215 Gini, and most of that comes from using more attributes rather than from the model form: limited to the scorecard's eight attributes, a gradient-boosted model gains only 0.0072.
 
 ## What the project covers
 
@@ -19,6 +19,36 @@ Two pieces test the scorecard's assumptions. Reject inference asks how much the 
 Notebooks 07b to 07e widen that comparison. Notebook 07b adds an explainable boosting machine (with and without pairwise interactions), a monotone random forest, a small neural network (MLP) on raw and on binned inputs, and a stacked ensemble, all tuned and chosen on the 2015 validation year. Notebook 07c explains the boosted model and tests whether its interactions or reason codes should carry back into the scorecard. Notebook 07d fits a discrete-time hazard model, with prepayment as a competing outcome, to see what the timing of default adds. Notebook 07e is an illustrative causal example: double machine learning for the difference in bad rate between 60- and 36-month loans. The monitoring rule in notebook 09 judges each quarter's Gini against its own confidence interval and against the Gini the scorecard expects on that quarter's population if its probabilities were right, and it acts only when a shortfall persists for two quarters in a row.
 
 The pilot report is written the way a lender would read it: discrimination with confidence intervals, calibration by score band, gains tables, and swap sets against FICO at a matched approval rate, meaning the applicants the new score would approve that FICO declines and the reverse. The last step is monitoring, with population and characteristic stability over time and a simple rule for when to recalibrate, re-estimate or rebuild.
+
+## Results
+
+All results are on the 2016 out-of-time vintage (419,611 labelled loans, bad rate 12.06%), from notebooks 06 to 09. Figures are in `docs/figures/`.
+
+| Model | Gini [95% CI] | KS | Calibration slope | Calibration intercept |
+|---|---|---:|---:|---:|
+| Scorecard (champion, as developed) | 0.2838 [0.2789, 0.2888] | 0.2080 | 1.0117 | 0.2869 |
+| XGBoost, tuned, monotone | 0.3053 [0.3004, 0.3102] | 0.2214 | 0.9207 | 0.1095 |
+| XGBoost, tuned, recalibrated on 2015 | 0.3053 [0.3004, 0.3102] | 0.2214 | 0.9463 | −0.0157 |
+| EBM, monotone, main effects | 0.2995 [0.2946, 0.3045] | 0.2163 | 0.9766 | 0.2285 |
+| FICO midpoint (incumbent) | 0.1805 [0.1754, 0.1855] | 0.1354 | — | — |
+
+The calibration slope and intercept come from a logistic fit of the outcome on each model's predicted log-odds; a slope of 1 and an intercept of 0 mean the model's probabilities carry over to 2016 as they are. FICO is a score rather than a probability, so it has none, and its range is truncated in this population (see Limitations). The tuned XGBoost leads the monotone EBM by 0.0058 Gini (paired DeLong 95% interval 0.0048 to 0.0068): a real but small price for a model whose every effect is a readable curve.
+
+![Gini of every model on 2016, with DeLong 95% intervals](docs/figures/model_comparison_2016.png)
+
+**Calibration.** The scorecard ranks 2016 correctly (slope 1.012) but under-predicts its level: 9.60% predicted against 12.06% observed, because the bad rate rose from 9.60% in the training years to 11.46% in 2015. Moving only the intercept to the 2015 bad rate (prior correction, +0.198 log-odds), which is the version a lender would deploy at the start of 2016, gives 11.41% predicted and leaves 3 of 11 score bands outside their 95% interval, against 8 of 11 before. The tuned XGBoost, recalibrated on 2015 with a two-parameter logistic map, predicts 11.17%.
+
+![Observed and predicted bad rate by score band, 2016](docs/figures/calibration_by_band_2016.png)
+
+**Swap set.** At a 70% approval rate, applied to the loans Lending Club booked in 2016, the scorecard and FICO approve the same number of loans. The 66,965 loans the scorecard would approve instead of FICO's go bad at 11.99%, and the 66,965 it would decline instead go bad at 17.48%. The approved book's bad rate falls from 10.50% to 9.25%, or 125 fewer bads per 10,000 approvals; the gain is 157 per 10,000 at a 50% approval rate and 60 at 90%. This is a reordering within loans Lending Club already approved, not a statement about the applicants it declined.
+
+![Bad rate of the approved book at each approval rate, scorecard and FICO, 2016](docs/figures/swap_set_2016.png)
+
+**Reject inference.** On a simulated reject region (20% of the development loans declined on FICO, with their outcomes hidden), no method recovered the ranking of the declined loans materially better than the scorecard fitted on approved loans alone: Gini on the declines was 0.2283 for that scorecard and 0.2327 for the best method, self-training. None estimated their bad rate well either: the hidden truth was 14.07%, and the estimates ran from 12.61% to 25.19%. Fuzzy augmentation changed no decision at a 70% approval rate. The pilot therefore reports the booked population.
+
+**Survival model.** A discrete-time hazard on the scorecard's eight attributes, with prepayment as a competing outcome, ranks 2016 the same as the scorecard: its cumulative default at 24 months has a Gini of 0.2834 against 0.2838 (difference −0.0005, 95% interval −0.0011 to 0.0002), and a rank correlation of 0.992 with the scorecard's probability. What it adds is timing: cumulative default curves by score band, a candidate early indicator for vintages that are not yet 24 months old.
+
+**Monitoring.** Notebook 09 monitors the deployed scorecard, with its intercept recalibrated on 2015, quarter by quarter. Calibration stays within bounds in every quarter, and the population stability index stays between 0.0010 and 0.0130. 2016Q1 ranks well above its expected Gini (0.313 against 0.286). From 2016Q3 the observed Gini falls below what the scorecard expects on each quarter's loans: a first breach in 2016Q3 gives watch (0.2610 against 0.2723), the second in 2016Q4 gives re-estimate (0.2575 against 0.2753), and 2017Q1 breaches again (0.2644 against 0.2768), so the action stays re-estimate. Of the three simulated drifts, a covariate shift lands on "investigate population, no model change": its Gini falls, but only as far as the scorecard expects on the narrower population (0.2613 against 0.2584). A concept shift lands on recalibrate, and an ordering decay on re-estimate.
 
 ## Data
 
@@ -60,6 +90,20 @@ Bad rate is bad divided by bad plus good. Loans issued before 2013 (95,902, incl
 The bad rate rises from about 9.6% in training to 12.1% in the test year. A model fit on 2013 to 2014 can rank 2016 borrowers well and still under-predict their risk, so the pilot report checks calibration by score band separately from ranking.
 
 The first notebook shows why training starts in 2013. A block of 21 bureau fields was not reported for loans issued from January to August 2012, so in 2012 a missing value would mark the issue date rather than anything about the borrower. Another block of seven fields only exists from 2016 and is not used. Where training starts is set in `config.TRAIN_VINTAGES`, and changing it means rebuilding the views with `make views`.
+
+## Limitations
+
+The label is a proxy built from the last payment date, and it undercounts borrowers who fell behind and later recovered.
+
+Lending Club approved largely on FICO, so FICO's range is truncated in this population (no loan below a FICO midpoint of 662 in these vintages) and its Gini here understates what FICO does on all applicants. The comparison with FICO shows ranking within the booked population, not a head-to-head on every applicant.
+
+The model learns only from funded loans. The rejected file has nine fields and no outcomes, so reject inference is tested on a simulated reject region where the truth is known, and the results show how the methods behave rather than what Lending Club's rejected applicants would have done.
+
+The out-of-time split is chronological but retrospective: some of the labels used for validation matured after a model built at the start of 2016 would already have been in use.
+
+Lending Club data has no protected attributes. The fairness checks in the pilot report show the method on a proxy grouping, not a finding about real disparities.
+
+Lending Club is a marketplace lender, not a credit bureau, and its application data mixes bureau-derived fields with Lending Club's own. The model is a bureau-style scorecard in method and design, not a bureau score.
 
 ## Getting started
 
@@ -158,50 +202,6 @@ An account-management (behaviour) model needs monthly performance on open accoun
 A real fair-lending search for a less discriminatory alternative needs protected-class data, or a validated proxy such as one built from surname and geography. Lending Club has neither. The `fairness` module shows the method on a geographic proxy only.
 
 Both are planned as a separate module.
-
-## Results
-
-All results are on the 2016 out-of-time vintage (419,611 labelled loans, bad rate 12.06%), from notebooks 06 to 09. Figures are in `docs/figures/`.
-
-| Model | Gini [95% CI] | KS | Calibration slope | Calibration intercept |
-|---|---|---:|---:|---:|
-| Scorecard (champion, as developed) | 0.2838 [0.2789, 0.2888] | 0.2080 | 1.0117 | 0.2869 |
-| XGBoost, tuned, monotone | 0.3053 [0.3004, 0.3102] | 0.2214 | 0.9207 | 0.1095 |
-| XGBoost, tuned, recalibrated on 2015 | 0.3053 [0.3004, 0.3102] | 0.2214 | 0.9463 | −0.0157 |
-| EBM, monotone, main effects | 0.2995 [0.2946, 0.3045] | 0.2163 | 0.9766 | 0.2285 |
-| FICO midpoint (incumbent) | 0.1805 [0.1754, 0.1855] | 0.1354 | — | — |
-
-The calibration slope and intercept come from a logistic fit of the outcome on each model's predicted log-odds; a slope of 1 and an intercept of 0 mean the model's probabilities carry over to 2016 as they are. FICO is a score rather than a probability, so it has none, and its range is truncated in this population (see Limitations). The tuned XGBoost leads the monotone EBM by 0.0058 Gini (paired DeLong 95% interval 0.0048 to 0.0068): a real but small price for a model whose every effect is a readable curve.
-
-![Gini of every model on 2016, with DeLong 95% intervals](docs/figures/model_comparison_2016.png)
-
-**Calibration.** The scorecard ranks 2016 correctly (slope 1.012) but under-predicts its level: 9.60% predicted against 12.06% observed, because the bad rate rose from 9.60% in the training years to 11.46% in 2015. Moving only the intercept to the 2015 bad rate (prior correction, +0.198 log-odds), which is the version a lender would deploy at the start of 2016, gives 11.41% predicted and leaves 3 of 11 score bands outside their 95% interval, against 8 of 11 before. The tuned XGBoost, recalibrated on 2015 with a two-parameter logistic map, predicts 11.17%.
-
-![Observed and predicted bad rate by score band, 2016](docs/figures/calibration_by_band_2016.png)
-
-**Swap set.** At a 70% approval rate, applied to the loans Lending Club booked in 2016, the scorecard and FICO approve the same number of loans. The 66,965 loans the scorecard would approve instead of FICO's go bad at 11.99%, and the 66,965 it would decline instead go bad at 17.48%. The approved book's bad rate falls from 10.50% to 9.25%, or 125 fewer bads per 10,000 approvals; the gain is 157 per 10,000 at a 50% approval rate and 60 at 90%. This is a reordering within loans Lending Club already approved, not a statement about the applicants it declined.
-
-![Bad rate of the approved book at each approval rate, scorecard and FICO, 2016](docs/figures/swap_set_2016.png)
-
-**Reject inference.** On a simulated reject region (20% of the development loans declined on FICO, with their outcomes hidden), no method recovered the ranking of the declined loans materially better than the scorecard fitted on approved loans alone: Gini on the declines was 0.2283 for that scorecard and 0.2327 for the best method, self-training. None estimated their bad rate well either: the hidden truth was 14.07%, and the estimates ran from 12.61% to 25.19%. Fuzzy augmentation changed no decision at a 70% approval rate. The pilot therefore reports the booked population.
-
-**Survival model.** A discrete-time hazard on the scorecard's eight attributes, with prepayment as a competing outcome, ranks 2016 the same as the scorecard: its cumulative default at 24 months has a Gini of 0.2834 against 0.2838 (difference −0.0005, 95% interval −0.0011 to 0.0002), and a rank correlation of 0.992 with the scorecard's probability. What it adds is timing: cumulative default curves by score band, a candidate early indicator for vintages that are not yet 24 months old.
-
-**Monitoring.** Notebook 09 monitors the deployed scorecard, with its intercept recalibrated on 2015, quarter by quarter. Calibration stays within bounds in every quarter, and the population stability index stays between 0.0010 and 0.0130. 2016Q1 ranks well above its expected Gini (0.313 against 0.286). From 2016Q3 the observed Gini falls below what the scorecard expects on each quarter's loans: a first breach in 2016Q3 gives watch (0.2610 against 0.2723), the second in 2016Q4 gives re-estimate (0.2575 against 0.2753), and 2017Q1 breaches again (0.2644 against 0.2768). Of the three simulated drifts, a covariate shift lands on "investigate population, no model change": its Gini falls, but only as far as the scorecard expects on the narrower population (0.2613 against 0.2584). A concept shift lands on recalibrate, and an ordering decay on re-estimate.
-
-## Limitations
-
-The label is a proxy built from the last payment date, and it undercounts borrowers who fell behind and later recovered.
-
-Lending Club approved largely on FICO, so FICO's range is truncated in this population (no loan below a FICO midpoint of 662 in these vintages) and its Gini here understates what FICO does on all applicants. The comparison with FICO shows ranking within the booked population, not a head-to-head on every applicant.
-
-The model learns only from funded loans. The rejected file has nine fields and no outcomes, so reject inference is tested on a simulated reject region where the truth is known, and the results show how the methods behave rather than what Lending Club's rejected applicants would have done.
-
-The out-of-time split is chronological but retrospective: some of the labels used for validation matured after a model built at the start of 2016 would already have been in use.
-
-Lending Club data has no protected attributes. The fairness checks in the pilot report show the method on a proxy grouping, not a finding about real disparities.
-
-Lending Club is a marketplace lender, not a credit bureau, and its application data mixes bureau-derived fields with Lending Club's own. The model is a bureau-style scorecard in method and design, not a bureau score.
 
 ## Disclaimer
 
